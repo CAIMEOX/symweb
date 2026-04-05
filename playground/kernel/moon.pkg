@@ -1,0 +1,17 @@
+import {
+  "CAIMEOX/symweb/playground/common",
+  "moonbitlang/core/json",
+  "CAIMEOX/symbit",
+  "CAIMEOX/symbit/symcalculus",
+  "CAIMEOX/symbit/symcore",
+  "CAIMEOX/symbit/symintegrals",
+  "CAIMEOX/symbit/symphysics",
+  "CAIMEOX/symbit/sympolys",
+  "CAIMEOX/symbit/symparse",
+  "CAIMEOX/symbit/symprint",
+  "CAIMEOX/symbit/symnum",
+  "CAIMEOX/symbit/symntheory",
+  "CAIMEOX/symbit/symseries",
+  "CAIMEOX/symbit/symsets",
+  "CAIMEOX/symbit/symsolvers",
+}

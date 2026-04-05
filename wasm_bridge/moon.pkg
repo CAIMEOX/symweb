@@ -1,0 +1,13 @@
+import {
+  "CAIMEOX/symweb/playground/kernel",
+}
+
+options(
+  link: {
+    "wasm-gc": {
+      "exports": [ "run_eval_json" ],
+      "imported-string-constants": "_",
+      "use-js-builtin-string": true,
+    },
+  },
+)

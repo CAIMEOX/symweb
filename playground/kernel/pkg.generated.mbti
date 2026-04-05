@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "CAIMEOX/symweb/playground/kernel"
+
+import {
+  "CAIMEOX/symweb/playground/common",
+}
+
+// Values
+pub fn evaluate_json(String) -> String
+
+pub fn evaluate_request(@common.KernelRequest) -> @common.KernelEvalState
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+
