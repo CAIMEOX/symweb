@@ -1,7 +1,7 @@
 ///|
 #cfg(target="js")
 fn main {
-  @rabbita.new(@playground.algebra_app()).mount("app")
+  @playground.algebra_web_app().mount("app")
 }
 
 ///|

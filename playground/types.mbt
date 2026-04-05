@@ -165,6 +165,7 @@ priv struct DocModel {
 priv enum DocMsg {
   UpdateDraft(String)
   DebouncedRun(Int)
+  CheckKernelReady
   OpenSettings
   CloseSettings
   ToggleStructuralFormDisplay

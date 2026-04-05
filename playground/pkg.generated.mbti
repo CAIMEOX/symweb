@@ -8,6 +8,8 @@ import {
 // Values
 pub fn algebra_app() -> @rabbita.Cell
 
+pub fn algebra_web_app() -> @rabbita.App
+
 // Errors
 
 // Types and methods

@@ -281,6 +281,11 @@ fn debounce_ms() -> Int {
 }
 
 ///|
+fn kernel_poll_ms() -> Int {
+  120
+}
+
+///|
 #cfg(target="js")
 extern "js" fn wasm_kernel_status() -> String =
   #| function() {
@@ -434,7 +439,7 @@ fn default_model() -> DocModel {
     draft_source: example.source,
     parser: default_parser_settings(),
     show_structural_form: true,
-    result: EvalState::Failure("initializing"),
+    result: EvalState::Failure(kernel_loading_message()),
     dirty: false,
     draft_revision: 0,
     settings_open: false,
