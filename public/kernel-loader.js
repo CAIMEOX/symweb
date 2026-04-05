@@ -1,5 +1,10 @@
 (function() {
-  const kernelPath = "/generated/symweb-kernel.wasm";
+  const loaderUrl =
+    document.currentScript instanceof HTMLScriptElement &&
+    document.currentScript.src
+      ? document.currentScript.src
+      : document.baseURI;
+  const kernelPath = new URL("./generated/symweb-kernel.wasm", loaderUrl).href;
   const compileOptions = {
     builtins: ["js-string"],
     importedStringConstants: "_",
