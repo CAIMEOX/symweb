@@ -7,7 +7,7 @@ import { defineConfig } from 'vite'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const basePath = normalizeBasePath(process.env.SYMWEB_BASE_PATH ?? '/')
 const moonJsArgs = ['build', 'cmd/web', '--target', 'js']
-const moonWasmArgs = ['build', 'wasm_bridge', '--target', 'wasm-gc', '--release']
+const moonWasmArgs = ['build', 'wasm_bridge', '--target', 'wasm', '--release']
 const moonJsOutput = path.join(
   __dirname,
   '_build',
@@ -21,7 +21,7 @@ const moonJsOutput = path.join(
 const moonWasmOutput = path.join(
   __dirname,
   '_build',
-  'wasm-gc',
+  'wasm',
   'release',
   'build',
   'wasm_bridge',
@@ -60,7 +60,7 @@ function syncMoonEntry() {
     throw new Error(`MoonBit JS output not found: ${moonJsOutput}`)
   }
   if (!existsSync(moonWasmOutput)) {
-    throw new Error(`MoonBit wasm-gc output not found: ${moonWasmOutput}`)
+    throw new Error(`MoonBit wasm output not found: ${moonWasmOutput}`)
   }
   mkdirSync(generatedDir, { recursive: true })
   copyFileSync(moonJsOutput, generatedEntry)

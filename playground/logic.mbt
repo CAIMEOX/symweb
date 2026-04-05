@@ -272,7 +272,7 @@ fn kernel_request(
 
 ///|
 fn kernel_loading_message() -> String {
-  "The wasm-gc compute kernel is still loading."
+  "The wasm compute kernel is still loading."
 }
 
 ///|
@@ -389,7 +389,7 @@ fn evaluate_source(
     "loading" => EvalState::Failure(kernel_loading_message())
     status if status.has_prefix("error:") =>
       EvalState::Failure(status[6:].to_string())
-    _ => EvalState::Failure("The wasm-gc compute kernel is unavailable.")
+    _ => EvalState::Failure("The wasm compute kernel is unavailable.")
   }
 }
 

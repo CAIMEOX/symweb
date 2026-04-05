@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "CAIMEOX/symweb/wasm_bridge"
+
+// Values
+pub fn kernel_evaluate_request() -> Int
+
+pub fn kernel_push_request_byte(Int) -> Unit
+
+pub fn kernel_reset_request() -> Unit
+
+pub fn kernel_result_byte(Int) -> Int
+
+pub fn kernel_result_length() -> Int
+
+pub fn run_eval_json(String) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

@@ -1,13 +1,21 @@
 import {
   "CAIMEOX/symweb/playground/kernel",
+  "moonbitlang/core/buffer",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
 }
 
 options(
   link: {
-    "wasm-gc": {
-      "exports": [ "run_eval_json" ],
-      "imported-string-constants": "_",
-      "use-js-builtin-string": true,
+    "wasm": {
+      "exports": [
+        "kernel_reset_request",
+        "kernel_push_request_byte",
+        "kernel_evaluate_request",
+        "kernel_result_length",
+        "kernel_result_byte",
+      ],
+      "export-memory-name": "memory",
     },
   },
 )
