@@ -1,0 +1,76 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "CAIMEOX/symweb/playground/common"
+
+import {
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn kernel_failure(String) -> KernelEvalState
+
+pub fn kernel_request(String, String, ParserSettings) -> KernelRequest
+
+pub fn kernel_success(String, String?, String, Array[ResultField]) -> KernelEvalState
+
+pub fn kernel_success_payload(String, String?, String, Array[ResultField]) -> KernelSuccess
+
+pub fn parser_settings(Bool, Bool, Bool, Bool, Bool, Bool, Bool) -> ParserSettings
+
+pub fn result_field(String, String, latex? : String?) -> ResultField
+
+// Errors
+
+// Types and methods
+pub(all) enum KernelEvalState {
+  Success(KernelSuccess)
+  Failure(String)
+}
+pub impl Eq for KernelEvalState
+pub impl ToJson for KernelEvalState
+pub impl @json.FromJson for KernelEvalState
+
+pub(all) struct KernelRequest {
+  function_id : String
+  source : String
+  parser : ParserSettings
+}
+pub impl Eq for KernelRequest
+pub impl ToJson for KernelRequest
+pub impl @json.FromJson for KernelRequest
+
+pub(all) struct KernelSuccess {
+  parsed_expression : String
+  parsed_latex : String?
+  structural_form : String
+  fields : Array[ResultField]
+}
+pub impl Eq for KernelSuccess
+pub impl ToJson for KernelSuccess
+pub impl @json.FromJson for KernelSuccess
+
+pub(all) struct ParserSettings {
+  caret_as_power : Bool
+  evaluate : Bool
+  implicit_multiplication : Bool
+  implicit_application : Bool
+  function_exponentiation : Bool
+  factorial_notation : Bool
+  convert_equals_signs : Bool
+}
+pub impl Eq for ParserSettings
+pub impl ToJson for ParserSettings
+pub impl @json.FromJson for ParserSettings
+
+pub(all) struct ResultField {
+  label : String
+  value : String
+  latex : String?
+}
+pub impl Eq for ResultField
+pub impl ToJson for ResultField
+pub impl @json.FromJson for ResultField
+
+// Type aliases
+
+// Traits
+
