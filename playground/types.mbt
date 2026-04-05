@@ -4,6 +4,9 @@ priv enum DocPackage {
   SymCalculus
   SymIntegrals
   SymSeries
+  SymSets
+  SymConcrete
+  SymDiscrete
   SymPolys
   SymNTheory
   SymPhysics
@@ -22,6 +25,16 @@ priv enum DocFunction {
   SeriesExpand
   Limit
   Residue
+  SetInterval
+  SetFinite
+  SetContains
+  Summation
+  Product
+  Rationalize
+  DiscreteFFT
+  DiscreteIFFT
+  DiscreteFWHT
+  DiscreteMobius
   TermsGcd
   PolyFactor
   PolyFactorList

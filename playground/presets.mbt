@@ -45,6 +45,43 @@ fn package_doc(id : DocPackage) -> PackageDoc {
           DocFunction::Residue,
         ],
       }
+    DocPackage::SymSets =>
+      {
+        id,
+        label: "symsets",
+        overview: "Set-theoretic output is most useful when it stays concrete. This section focuses on intervals, finite sets, and membership queries, which are the core readable front doors in symbolic workflows.",
+        architecture: "Examples deliberately use tuple-shaped input instead of custom syntax. Interval constructors interpret (left, right) as a closed interval, finite-set examples reinterpret the tuple items as elements, and membership checks keep the base set fixed and explicit.",
+        functions: [
+          DocFunction::SetInterval,
+          DocFunction::SetFinite,
+          DocFunction::SetContains,
+        ],
+      }
+    DocPackage::SymConcrete =>
+      {
+        id,
+        label: "symconcrete",
+        overview: "Concrete mathematics is exposed through executable finite sums, finite products, and exact-rational recovery. These are the front doors most readers use before diving into recurrence or Gosper-style internals.",
+        architecture: "The browser fixes the summation and product symbol to k. Tuple inputs are interpreted as (term, lower, upper), which keeps the interface narrow while still exercising the real finite-sum and finite-product code paths.",
+        functions: [
+          DocFunction::Summation,
+          DocFunction::Product,
+          DocFunction::Rationalize,
+        ],
+      }
+    DocPackage::SymDiscrete =>
+      {
+        id,
+        label: "symdiscrete",
+        overview: "Discrete transforms are presented as small exact sequences rather than opaque numeric buffers. The page keeps the inputs tuple-based so FFT-style algorithms remain inspectable in symbolic form.",
+        architecture: "Every discrete front door reads a tuple as a sequence. The transforms here are chosen because they are short, compositional, and visibly different in output shape: Fourier, inverse Fourier, Walsh-Hadamard, and Möbius.",
+        functions: [
+          DocFunction::DiscreteFFT,
+          DocFunction::DiscreteIFFT,
+          DocFunction::DiscreteFWHT,
+          DocFunction::DiscreteMobius,
+        ],
+      }
     DocPackage::SymPolys =>
       {
         id,
@@ -141,6 +178,9 @@ fn package_catalog() -> Array[PackageDoc] {
     package_doc(DocPackage::SymCalculus),
     package_doc(DocPackage::SymIntegrals),
     package_doc(DocPackage::SymSeries),
+    package_doc(DocPackage::SymSets),
+    package_doc(DocPackage::SymConcrete),
+    package_doc(DocPackage::SymDiscrete),
     package_doc(DocPackage::SymPolys),
     package_doc(DocPackage::SymNTheory),
     package_doc(DocPackage::SymPhysics),
@@ -398,6 +438,238 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
             label: "Exponential numerator over a simple pole",
             description: "A residue with a nontrivial analytic numerator.",
             source: "exp(x)/x",
+          },
+        ],
+      }
+    DocFunction::SetInterval =>
+      {
+        id,
+        package_id: DocPackage::SymSets,
+        label: "interval",
+        module_path: "CAIMEOX/symbit/symsets",
+        signature: "interval(left: Expr, right: Expr) -> Set",
+        summary: "Construct a closed interval from two symbolic endpoints.",
+        narrative: "An interval is the smallest set constructor that still shows the symbolic set layer in action. It is the usual first step before unions, intersections, and solving over domains.",
+        interpretation: "The browser interprets the input tuple as (left, right) and returns the closed interval [left, right].",
+        examples: [
+          {
+            id: "set_interval_numeric",
+            label: "Numeric interval",
+            description: "A compact closed interval with integer endpoints.",
+            source: "(0, 3)",
+          },
+          {
+            id: "set_interval_symbolic",
+            label: "Symbolic interval",
+            description: "Shows that endpoints stay symbolic and unevaluated.",
+            source: "(-a, a + 1)",
+          },
+        ],
+      }
+    DocFunction::SetFinite =>
+      {
+        id,
+        package_id: DocPackage::SymSets,
+        label: "finite_set",
+        module_path: "CAIMEOX/symbit/symsets",
+        signature: "finite_set(items: Array[Expr]) -> Set",
+        summary: "Build a finite set from the tuple items in the editor input.",
+        narrative: "Finite sets are the cleanest bridge between ordinary symbolic expressions and the set domain. They preserve exact expressions while still displaying set semantics.",
+        interpretation: "Every tuple component becomes one element of the resulting finite set.",
+        examples: [
+          {
+            id: "set_finite_symbols",
+            label: "Mixed symbolic elements",
+            description: "Construct a finite set from symbols and arithmetic expressions.",
+            source: "(x, 1, y + 1)",
+          },
+          {
+            id: "set_finite_numbers",
+            label: "Numeric finite set",
+            description: "A discrete set of exact integer elements.",
+            source: "(1, 2, 5, 8)",
+          },
+        ],
+      }
+    DocFunction::SetContains =>
+      {
+        id,
+        package_id: DocPackage::SymSets,
+        label: "contains",
+        module_path: "CAIMEOX/symbit/symsets",
+        signature: "contains(value: Expr, interval: Interval) -> SetBool",
+        summary: "Test whether a value lies in the closed interval defined by the remaining tuple entries.",
+        narrative: "Membership tests are the place where set construction starts to matter computationally. They expose the tri-valued symbolic answer space instead of collapsing everything to booleans.",
+        interpretation: "The browser interprets the input tuple as (value, left, right) and checks value ∈ [left, right].",
+        examples: [
+          {
+            id: "set_contains_true",
+            label: "Value inside interval",
+            description: "A direct membership query that should evaluate to True.",
+            source: "(2, 0, 3)",
+          },
+          {
+            id: "set_contains_symbolic",
+            label: "Symbolic membership",
+            description: "Leaves the answer symbolic when the comparison cannot be decided.",
+            source: "(x, 0, 1)",
+          },
+        ],
+      }
+    DocFunction::Summation =>
+      {
+        id,
+        package_id: DocPackage::SymConcrete,
+        label: "summation",
+        module_path: "CAIMEOX/symbit/symconcrete",
+        signature: "summation(term: Expr, lower: Expr, upper: Expr) -> Expr",
+        summary: "Evaluate a finite sum with respect to the fixed summation index k.",
+        narrative: "This is the standard concrete-math front door: write a term, a lower bound, and an upper bound, then ask for the exact symbolic sum.",
+        interpretation: "The tuple input is read as (term, lower, upper), and the runner binds the summation variable to k.",
+        examples: [
+          {
+            id: "summation_polynomial",
+            label: "Polynomial finite sum",
+            description: "A textbook finite sum with symbolic upper limit.",
+            source: "(k^2, 1, n)",
+          },
+          {
+            id: "summation_numeric",
+            label: "Numeric finite sum",
+            description: "A finite arithmetic sum with exact integer bounds.",
+            source: "(2*k + 1, 0, 5)",
+          },
+        ],
+      }
+    DocFunction::Product =>
+      {
+        id,
+        package_id: DocPackage::SymConcrete,
+        label: "product",
+        module_path: "CAIMEOX/symbit/symconcrete",
+        signature: "product(term: Expr, lower: Expr, upper: Expr) -> Expr",
+        summary: "Evaluate a finite product with respect to the fixed product index k.",
+        narrative: "Products are the multiplicative counterpart of summation. Keeping the index fixed to k lets the page show exact product evaluation without adding extra control syntax.",
+        interpretation: "The tuple input is read as (term, lower, upper), and the runner computes the finite product over k.",
+        examples: [
+          {
+            id: "product_factorial",
+            label: "Factorial-style product",
+            description: "A finite product over consecutive integers.",
+            source: "(k, 1, 5)",
+          },
+          {
+            id: "product_shifted",
+            label: "Shifted linear factors",
+            description: "A product of shifted factors that stays symbolic.",
+            source: "(k + x, 1, 3)",
+          },
+        ],
+      }
+    DocFunction::Rationalize =>
+      {
+        id,
+        package_id: DocPackage::SymConcrete,
+        label: "rationalize",
+        module_path: "CAIMEOX/symbit/symconcrete",
+        signature: "rationalize(expr: Expr) -> Expr",
+        summary: "Recover an exact rational expression from a decimal or floating input.",
+        narrative: "Rational reconstruction is useful when a numeric approximation is clearly meant to stand for an exact rational value. It is a small front door, but it shows the exact arithmetic layer directly.",
+        interpretation: "The page sends one expression into the rationalization routine and shows the exact recovered result when it is found.",
+        examples: [
+          {
+            id: "rationalize_decimal",
+            label: "Finite decimal",
+            description: "A decimal with a clean rational reconstruction.",
+            source: "0.125",
+          },
+          {
+            id: "rationalize_repeat",
+            label: "Simple repeating decimal",
+            description: "A decimal that should collapse to a small rational number.",
+            source: "0.3",
+          },
+        ],
+      }
+    DocFunction::DiscreteFFT =>
+      {
+        id,
+        package_id: DocPackage::SymDiscrete,
+        label: "fft",
+        module_path: "CAIMEOX/symbit/symdiscrete",
+        signature: "fft(seq: Array[Expr]) -> Array[Expr]",
+        summary: "Compute the discrete Fourier transform of a symbolic sequence.",
+        narrative: "The FFT examples stay short enough to read entry-by-entry. That keeps the transform visible as a symbolic change of basis rather than a hidden numeric kernel.",
+        interpretation: "The tuple input is interpreted as the full sequence to transform.",
+        examples: [
+          {
+            id: "fft_basic",
+            label: "Length-four transform",
+            description: "A standard four-point exact FFT.",
+            source: "(1, 2, 3, 4)",
+          },
+          {
+            id: "fft_symbolic",
+            label: "Symbolic sequence",
+            description: "Shows how the transform distributes over symbolic terms.",
+            source: "(1, x, x^2, x^3)",
+          },
+        ],
+      }
+    DocFunction::DiscreteIFFT =>
+      {
+        id,
+        package_id: DocPackage::SymDiscrete,
+        label: "ifft",
+        module_path: "CAIMEOX/symbit/symdiscrete",
+        signature: "ifft(seq: Array[Expr]) -> Array[Expr]",
+        summary: "Invert a discrete Fourier transform back to the original sequence.",
+        narrative: "Inverse FFT examples are useful because they show the exact normalization convention of the transform layer.",
+        interpretation: "The tuple input is interpreted as Fourier-domain coefficients, and the runner reconstructs the time-domain sequence.",
+        examples: [
+          {
+            id: "ifft_basic",
+            label: "Inverse of the standard four-point FFT",
+            description: "This tuple inverts back to (1, 2, 3, 4).",
+            source: "(10, -2 + 2*I, -2, -2 - 2*I)",
+          },
+        ],
+      }
+    DocFunction::DiscreteFWHT =>
+      {
+        id,
+        package_id: DocPackage::SymDiscrete,
+        label: "fwht",
+        module_path: "CAIMEOX/symbit/symdiscrete",
+        signature: "fwht(seq: Array[Expr]) -> Array[Expr]",
+        summary: "Compute the fast Walsh-Hadamard transform of a symbolic sequence.",
+        narrative: "The Walsh-Hadamard transform is structurally different from the Fourier transform but uses the same tuple-shaped input surface, making it a good comparative front door.",
+        interpretation: "The tuple input is interpreted as the full sequence to transform.",
+        examples: [
+          {
+            id: "fwht_basic",
+            label: "Length-four Walsh-Hadamard transform",
+            description: "A compact example with exact integer coefficients.",
+            source: "(1, 2, 3, 4)",
+          },
+        ],
+      }
+    DocFunction::DiscreteMobius =>
+      {
+        id,
+        package_id: DocPackage::SymDiscrete,
+        label: "mobius_transform",
+        module_path: "CAIMEOX/symbit/symdiscrete",
+        signature: "mobius_transform(seq: Array[Expr]) -> Array[Expr]",
+        summary: "Apply the subset Möbius transform to a short exact sequence.",
+        narrative: "This transform belongs to the combinatorial side of the discrete package. It is valuable here because the output pattern is visibly different from FFT-style transforms while using the same tuple input format.",
+        interpretation: "The tuple input is interpreted as the sequence indexed by subsets in binary order.",
+        examples: [
+          {
+            id: "mobius_basic",
+            label: "Subset Möbius transform",
+            description: "A small exact sequence with a readable transformed output.",
+            source: "(1, 2, 3, 4)",
           },
         ],
       }
@@ -1492,6 +1764,16 @@ fn function_topic(id : DocFunction) -> String {
     DocFunction::SeriesExpand => "series"
     DocFunction::Limit => "series"
     DocFunction::Residue => "series"
+    DocFunction::SetInterval => "sets"
+    DocFunction::SetFinite => "sets"
+    DocFunction::SetContains => "sets"
+    DocFunction::Summation => "concrete"
+    DocFunction::Product => "concrete"
+    DocFunction::Rationalize => "concrete"
+    DocFunction::DiscreteFFT => "discrete"
+    DocFunction::DiscreteIFFT => "discrete"
+    DocFunction::DiscreteFWHT => "discrete"
+    DocFunction::DiscreteMobius => "discrete"
     DocFunction::TermsGcd => "polys"
     DocFunction::PolyFactor => "polys"
     DocFunction::PolyFactorList => "polys"
@@ -1558,6 +1840,16 @@ fn function_input_format(id : DocFunction) -> String {
     DocFunction::SeriesExpand => "expr"
     DocFunction::Limit => "expr"
     DocFunction::Residue => "expr"
+    DocFunction::SetInterval => "tuple"
+    DocFunction::SetFinite => "tuple"
+    DocFunction::SetContains => "tuple"
+    DocFunction::Summation => "tuple"
+    DocFunction::Product => "tuple"
+    DocFunction::Rationalize => "expr"
+    DocFunction::DiscreteFFT => "tuple"
+    DocFunction::DiscreteIFFT => "tuple"
+    DocFunction::DiscreteFWHT => "tuple"
+    DocFunction::DiscreteMobius => "tuple"
     DocFunction::TermsGcd => "expr"
     DocFunction::PolyFactor => "expr"
     DocFunction::PolyFactorList => "expr"

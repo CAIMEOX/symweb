@@ -83,3 +83,88 @@ test "kernel factorint exposes arithmetic factor maps" {
     }
   }
 }
+
+///|
+test "kernel set front doors expose interval construction and membership" {
+  let request = @common.kernel_request(
+    "set_contains",
+    "(2, 0, 3)",
+    test_parser_settings(),
+  )
+  match evaluate_request(request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("set_contains failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields.length(), content="3")
+      inspect(payload.fields[1].label, content="Set")
+      inspect(payload.fields[1].value, content="Interval(0, 3)")
+      inspect(payload.fields[2].label, content="Result")
+      inspect(payload.fields[2].value, content="True")
+    }
+  }
+}
+
+///|
+test "kernel concrete front doors evaluate finite products and sums" {
+  let product_request = @common.kernel_request(
+    "product",
+    "(k, 1, 5)",
+    test_parser_settings(),
+  )
+  match evaluate_request(product_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("product failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[2].label, content="Result")
+      inspect(payload.fields[2].value, content="120")
+    }
+  }
+  let summation_request = @common.kernel_request(
+    "summation",
+    "(k^2, 1, 3)",
+    test_parser_settings(),
+  )
+  match evaluate_request(summation_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("summation failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[2].label, content="Result")
+      if !payload.fields[2].value.contains("3**2") {
+        fail("expected explicit finite summation result terms")
+      }
+    }
+  }
+}
+
+///|
+test "kernel discrete transforms expose fft and mobius front doors" {
+  let fft_request = @common.kernel_request(
+    "discrete_fft",
+    "(1, 2, 3, 4)",
+    test_parser_settings(),
+  )
+  match evaluate_request(fft_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("fft failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[1].label, content="Result")
+      if !payload.fields[1].value.contains("I") ||
+        !payload.fields[1].value.contains("10") {
+        fail("expected complex-valued FFT output")
+      }
+    }
+  }
+  let mobius_request = @common.kernel_request(
+    "discrete_mobius",
+    "(1, 2, 3, 4)",
+    test_parser_settings(),
+  )
+  match evaluate_request(mobius_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("mobius_transform failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[1].label, content="Result")
+      inspect(payload.fields[1].value, content="[1, 3, 4, 10]")
+    }
+  }
+}

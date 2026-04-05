@@ -121,6 +121,20 @@ fn set_text(set : @symsets.Set) -> String {
 }
 
 ///|
+fn set_field(label : String, set : @symsets.Set) -> @common.ResultField {
+  plain_field(label, set_text(set))
+}
+
+///|
+fn set_bool_text(value : @symsets.SetBool) -> String {
+  match value {
+    @symsets.SetBool::True => "True"
+    @symsets.SetBool::False => "False"
+    @symsets.SetBool::Unknown => "Unknown"
+  }
+}
+
+///|
 fn poly_text(poly : @sympolys.Poly) -> String {
   expr_text(poly.to_expr())
 }
@@ -512,6 +526,11 @@ fn x_symbol() -> @symbit.Expr {
 }
 
 ///|
+fn k_symbol() -> @symbit.Expr {
+  @symbit.sympify_name("k")
+}
+
+///|
 fn unknown_function(function_id : String) -> @common.KernelEvalState {
   @common.KernelEvalState::Failure("Unknown function id: \{function_id}")
 }
@@ -638,6 +657,143 @@ pub fn evaluate_request(
                 expr_field("Pole", point),
                 expr_field("Result", result),
               ])
+          }
+        }
+        "set_interval" =>
+          match require_arg_count(args, [2], "interval(left, right)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) =>
+              finish([
+                expr_list_field("Endpoints", args),
+                set_field("Result", @symsets.interval(args[0], args[1])),
+              ])
+          }
+        "set_finite" => {
+          if args.is_empty() {
+            @common.KernelEvalState::Failure(
+              "Expected at least 1 argument in finite_set(a1, a2, ...).",
+            )
+          } else {
+            finish([
+              expr_list_field("Elements", args),
+              set_field("Result", @symsets.finite_set(args)),
+            ])
+          }
+        }
+        "set_contains" =>
+          match require_arg_count(args, [3], "contains(value, left, right)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) => {
+              let base = @symsets.interval(args[1], args[2])
+              finish([
+                expr_field("Value", args[0]),
+                set_field("Set", base),
+                plain_field(
+                  "Result",
+                  set_bool_text(@symsets.contains(base, args[0])),
+                ),
+              ])
+            }
+          }
+        "summation" =>
+          match require_arg_count(args, [3], "summation(term, lower, upper)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) => {
+              let index = k_symbol()
+              let limit = @symconcrete.limit_range(index, args[1], args[2])
+              finish([
+                expr_field("Index", index),
+                expr_field("Term", args[0]),
+                expr_field(
+                  "Result",
+                  @symconcrete.summation(args[0], limits=[limit]),
+                ),
+              ])
+            }
+          }
+        "product" =>
+          match require_arg_count(args, [3], "product(term, lower, upper)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) => {
+              let index = k_symbol()
+              let limit = @symconcrete.limit_range(index, args[1], args[2])
+              finish([
+                expr_field("Index", index),
+                expr_field("Term", args[0]),
+                expr_field(
+                  "Result",
+                  @symconcrete.product(args[0], limits=[limit]),
+                ),
+              ])
+            }
+          }
+        "rationalize" =>
+          finish([
+            expr_field("Input", expr),
+            expr_field("Result", @symconcrete.rationalize(expr)),
+          ])
+        "discrete_fft" => {
+          if args.is_empty() {
+            @common.KernelEvalState::Failure(
+              "Expected at least 1 argument in fft(a0, a1, ...).",
+            )
+          } else {
+            let result : Result[
+              Array[@symbit.Expr],
+              @symdiscrete.DiscreteError,
+            ] = try? @symdiscrete.fft(args)
+            match result {
+              Err(error) => @common.KernelEvalState::Failure(error.to_string())
+              Ok(values) =>
+                finish([
+                  expr_list_field("Sequence", args),
+                  expr_list_field("Result", values),
+                ])
+            }
+          }
+        }
+        "discrete_ifft" => {
+          if args.is_empty() {
+            @common.KernelEvalState::Failure(
+              "Expected at least 1 argument in ifft(a0, a1, ...).",
+            )
+          } else {
+            let result : Result[
+              Array[@symbit.Expr],
+              @symdiscrete.DiscreteError,
+            ] = try? @symdiscrete.ifft(args)
+            match result {
+              Err(error) => @common.KernelEvalState::Failure(error.to_string())
+              Ok(values) =>
+                finish([
+                  expr_list_field("Sequence", args),
+                  expr_list_field("Result", values),
+                ])
+            }
+          }
+        }
+        "discrete_fwht" => {
+          if args.is_empty() {
+            @common.KernelEvalState::Failure(
+              "Expected at least 1 argument in fwht(a0, a1, ...).",
+            )
+          } else {
+            finish([
+              expr_list_field("Sequence", args),
+              expr_list_field("Result", @symdiscrete.fwht(args)),
+            ])
+          }
+        }
+        "discrete_mobius" => {
+          if args.is_empty() {
+            @common.KernelEvalState::Failure(
+              "Expected at least 1 argument in mobius_transform(a0, a1, ...).",
+            )
+          } else {
+            finish([
+              expr_list_field("Sequence", args),
+              expr_list_field("Result", @symdiscrete.mobius_transform(args)),
+            ])
           }
         }
         "terms_gcd" => {
