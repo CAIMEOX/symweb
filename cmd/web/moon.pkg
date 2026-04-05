@@ -1,0 +1,8 @@
+import {
+  "CAIMEOX/symweb/playground" @playground,
+  "moonbit-community/rabbita",
+}
+
+options(
+  "is-main": true,
+)
