@@ -45,6 +45,31 @@ fn package_doc(id : DocPackage) -> PackageDoc {
           DocFunction::Residue,
         ],
       }
+    DocPackage::SymAssume =>
+      {
+        id,
+        label: "symassume",
+        overview: "Symbolic assumptions are presented through small three-valued predicates. The browser keeps the front doors concrete: integer, real, and positive queries over a single expression.",
+        architecture: "Each predicate returns True, False, or Unknown. That preserves the same trivalent reading model used by symbolic assumption systems without exposing the full query algebra in the page itself.",
+        functions: [
+          DocFunction::AssumeIsInteger,
+          DocFunction::AssumeIsReal,
+          DocFunction::AssumeIsPositive,
+        ],
+      }
+    DocPackage::SymLogic =>
+      {
+        id,
+        label: "symlogic",
+        overview: "Boolean algebra is exposed through direct front doors for simplification, normal-form conversion, and satisfiability. The page treats logic formulas as first-class inputs rather than embedding them inside arithmetic expressions.",
+        architecture: "The logic editor accepts propositional syntax directly: use symbols such as A and B, unary ~, binary &, |, ^, and parentheses. Callable forms such as And(A, B) and Implies(A, B) are also accepted.",
+        functions: [
+          DocFunction::LogicSimplify,
+          DocFunction::LogicToCnf,
+          DocFunction::LogicToDnf,
+          DocFunction::LogicSatisfiable,
+        ],
+      }
     DocPackage::SymSets =>
       {
         id,
@@ -80,6 +105,21 @@ fn package_doc(id : DocPackage) -> PackageDoc {
           DocFunction::DiscreteIFFT,
           DocFunction::DiscreteFWHT,
           DocFunction::DiscreteMobius,
+        ],
+      }
+    DocPackage::SymMatrices =>
+      {
+        id,
+        label: "symmatrices",
+        overview: "Matrix work starts with dense constructors and scalar invariants. This section keeps that surface small: build a matrix, create standard identities, and inspect determinant or trace.",
+        architecture: "Matrix-valued front doors accept tuple-shaped data. Dense matrices use nested tuples such as ((1, x), (x, 1)); size-based constructors accept one or two exact integers.",
+        functions: [
+          DocFunction::MatrixConstruct,
+          DocFunction::MatrixEye,
+          DocFunction::MatrixZeros,
+          DocFunction::MatrixOnes,
+          DocFunction::MatrixDet,
+          DocFunction::MatrixTrace,
         ],
       }
     DocPackage::SymPolys =>
@@ -178,9 +218,12 @@ fn package_catalog() -> Array[PackageDoc] {
     package_doc(DocPackage::SymCalculus),
     package_doc(DocPackage::SymIntegrals),
     package_doc(DocPackage::SymSeries),
+    package_doc(DocPackage::SymAssume),
+    package_doc(DocPackage::SymLogic),
     package_doc(DocPackage::SymSets),
     package_doc(DocPackage::SymConcrete),
     package_doc(DocPackage::SymDiscrete),
+    package_doc(DocPackage::SymMatrices),
     package_doc(DocPackage::SymPolys),
     package_doc(DocPackage::SymNTheory),
     package_doc(DocPackage::SymPhysics),
@@ -441,6 +484,169 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
           },
         ],
       }
+    DocFunction::AssumeIsInteger =>
+      {
+        id,
+        package_id: DocPackage::SymAssume,
+        label: "is_integer",
+        module_path: "CAIMEOX/symbit/symassume",
+        signature: "is_integer(expr: Expr) -> Tri",
+        summary: "Ask whether an expression is provably an integer under the default assumption environment.",
+        narrative: "Assumption predicates are intentionally small front doors. They classify one expression at a time and expose the three-valued logic that symbolic reasoning relies on internally.",
+        interpretation: "The result is True when integrality is established, False when it is ruled out, and Unknown when the expression needs assumptions that are not currently available.",
+        examples: [
+          {
+            id: "assume_integer_exact",
+            label: "Exact integer value",
+            description: "A rational expression that simplifies to an integer.",
+            source: "6/3",
+          },
+          {
+            id: "assume_integer_symbolic",
+            label: "Symbolic indeterminacy",
+            description: "A symbolic expression with no integrality facts attached.",
+            source: "x/2",
+          },
+        ],
+      }
+    DocFunction::AssumeIsReal =>
+      {
+        id,
+        package_id: DocPackage::SymAssume,
+        label: "is_real",
+        module_path: "CAIMEOX/symbit/symassume",
+        signature: "is_real(expr: Expr) -> Tri",
+        summary: "Ask whether an expression belongs to the real numbers under default assumptions.",
+        narrative: "This front door keeps the assumption layer readable: one expression in, one semantic classification out.",
+        interpretation: "Use it when you want a direct real-versus-nonreal judgment rather than a simplification pass.",
+        examples: [
+          {
+            id: "assume_real_radical",
+            label: "Real algebraic number",
+            description: "A positive radical stays on the real line.",
+            source: "sqrt(2)",
+          },
+          {
+            id: "assume_real_imaginary_unit",
+            label: "Imaginary unit",
+            description: "A baseline non-real constant.",
+            source: "I",
+          },
+        ],
+      }
+    DocFunction::AssumeIsPositive =>
+      {
+        id,
+        package_id: DocPackage::SymAssume,
+        label: "is_positive",
+        module_path: "CAIMEOX/symbit/symassume",
+        signature: "is_positive(expr: Expr) -> Tri",
+        summary: "Ask whether an expression is strictly positive under default assumptions.",
+        narrative: "Positivity is a core semantic predicate for rewriting and solving, so exposing it directly makes the trivalent assumption model visible in the browser.",
+        interpretation: "The empty assumption environment means structurally positive-looking symbolic expressions may still return Unknown.",
+        examples: [
+          {
+            id: "assume_positive_literal",
+            label: "Negative literal",
+            description: "A direct False branch.",
+            source: "-3",
+          },
+          {
+            id: "assume_positive_symbolic_square",
+            label: "Symbolic square",
+            description: "Without sign assumptions, a square need not be strictly positive.",
+            source: "x^2",
+          },
+        ],
+      }
+    DocFunction::LogicSimplify =>
+      {
+        id,
+        package_id: DocPackage::SymLogic,
+        label: "simplify_logic",
+        module_path: "CAIMEOX/symbit/symlogic",
+        signature: "simplify_logic(expr: BoolExpr) -> BoolExpr",
+        summary: "Simplify a propositional formula to a smaller equivalent boolean expression.",
+        narrative: "This front door performs boolean-algebra simplification rather than arithmetic simplification. It is the natural entry point when the formula is already visibly propositional and you want a compact equivalent form.",
+        interpretation: "Use propositional symbols such as A and B together with ~, &, |, ^, and parentheses. The result is rendered back in symbolic boolean syntax.",
+        examples: [
+          {
+            id: "logic_simplify_absorption",
+            label: "Absorption and identity",
+            description: "A formula that collapses to a single symbol.",
+            source: "A & True | A & False",
+          },
+          {
+            id: "logic_simplify_demorgan",
+            label: "Negated conjunction",
+            description: "A short De Morgan style simplification.",
+            source: "~(A & B) | (A & B)",
+          },
+        ],
+      }
+    DocFunction::LogicToCnf =>
+      {
+        id,
+        package_id: DocPackage::SymLogic,
+        label: "to_cnf",
+        module_path: "CAIMEOX/symbit/symlogic",
+        signature: "to_cnf(expr: BoolExpr) -> BoolExpr",
+        summary: "Convert a propositional formula to conjunctive normal form.",
+        narrative: "CNF writes a formula as an AND of OR-clauses. It is the standard shape used by SAT procedures and clause-based reasoning.",
+        interpretation: "The browser uses the non-forcing conversion path, which is the same front-door reading most symbolic users want first.",
+        examples: [
+          {
+            id: "logic_cnf_distribution",
+            label: "Distribute disjunction over conjunction",
+            description: "A compact formula whose CNF shape is visible by inspection.",
+            source: "A | (B & C)",
+          },
+        ],
+      }
+    DocFunction::LogicToDnf =>
+      {
+        id,
+        package_id: DocPackage::SymLogic,
+        label: "to_dnf",
+        module_path: "CAIMEOX/symbit/symlogic",
+        signature: "to_dnf(expr: BoolExpr) -> BoolExpr",
+        summary: "Convert a propositional formula to disjunctive normal form.",
+        narrative: "DNF writes a formula as an OR of AND-terms. It is the complementary normal form to CNF and is often easier to read when the true cases are sparse.",
+        interpretation: "The input surface is the same propositional syntax used by the other logic front doors.",
+        examples: [
+          {
+            id: "logic_dnf_distribution",
+            label: "Distribute conjunction over disjunction",
+            description: "A compact formula whose DNF expansion is easy to verify.",
+            source: "A & (B | C)",
+          },
+        ],
+      }
+    DocFunction::LogicSatisfiable =>
+      {
+        id,
+        package_id: DocPackage::SymLogic,
+        label: "satisfiable",
+        module_path: "CAIMEOX/symbit/symlogic",
+        signature: "satisfiable(expr: BoolExpr) -> SatResult",
+        summary: "Check whether a propositional formula has a satisfying model and return one when it exists.",
+        narrative: "Satisfiability is the semantic companion to symbolic simplification. Instead of returning an equivalent formula, it returns either a witness assignment or False when the formula is inconsistent.",
+        interpretation: "The result is shown as a symbolic model map. Unsatisfiable input returns False.",
+        examples: [
+          {
+            id: "logic_sat_unsat",
+            label: "Contradiction",
+            description: "A formula with no satisfying assignment.",
+            source: "A & ~A",
+          },
+          {
+            id: "logic_sat_model",
+            label: "Single-symbol witness",
+            description: "A small formula that has a direct satisfying model.",
+            source: "A & (A | B)",
+          },
+        ],
+      }
     DocFunction::SetInterval =>
       {
         id,
@@ -670,6 +876,138 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
             label: "Subset Möbius transform",
             description: "A small exact sequence with a readable transformed output.",
             source: "(1, 2, 3, 4)",
+          },
+        ],
+      }
+    DocFunction::MatrixConstruct =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "matrix",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "matrix(rows: Array[Array[Expr]]) -> Matrix",
+        summary: "Construct a dense symbolic matrix from nested row data.",
+        narrative: "Dense matrices are the main explicit matrix carrier. The page uses nested tuples so matrix literals stay readable without introducing custom editor syntax.",
+        interpretation: "Enter a tuple of row tuples, such as ((1, x), (x, 1)). The runner converts each row into a dense matrix row and renders the result as both text and LaTeX.",
+        examples: [
+          {
+            id: "matrix_construct_symbolic",
+            label: "Symbolic symmetric matrix",
+            description: "A compact dense matrix with repeated symbolic entries.",
+            source: "((1, x), (x, 1))",
+          },
+          {
+            id: "matrix_construct_triangular",
+            label: "Upper triangular matrix",
+            description: "A small exact matrix literal.",
+            source: "((1, 2, 3), (0, 4, 5), (0, 0, 6))",
+          },
+        ],
+      }
+    DocFunction::MatrixEye =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "eye",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "eye(n: Int) -> Matrix",
+        summary: "Construct the n-by-n identity matrix.",
+        narrative: "Identity matrices are the smallest dense constructor that immediately exercises matrix printing and shape logic.",
+        interpretation: "The argument must be an exact integer. The result is a concrete dense matrix, not a symbolic identity expression node.",
+        examples: [
+          {
+            id: "matrix_eye_three",
+            label: "Three-dimensional identity",
+            description: "The canonical identity constructor example.",
+            source: "3",
+          },
+        ],
+      }
+    DocFunction::MatrixZeros =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "zeros",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "zeros(rows: Int, cols: Int = rows) -> Matrix",
+        summary: "Construct a dense zero matrix with square or rectangular shape.",
+        narrative: "This is the standard size-based dense constructor. The browser accepts either one integer for a square matrix or a two-integer tuple for a rectangular matrix.",
+        interpretation: "Use it when you want the dense matrix itself, not a symbolic zero-matrix expression.",
+        examples: [
+          {
+            id: "matrix_zeros_rectangular",
+            label: "Rectangular zero matrix",
+            description: "A rectangular constructor example.",
+            source: "(2, 3)",
+          },
+        ],
+      }
+    DocFunction::MatrixOnes =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "ones",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "ones(rows: Int, cols: Int = rows) -> Matrix",
+        summary: "Construct a dense matrix filled with ones.",
+        narrative: "The all-ones constructor uses the same shape logic as zeros while producing a visibly different symbolic matrix.",
+        interpretation: "One integer means a square matrix; a two-integer tuple means a rectangular matrix.",
+        examples: [
+          {
+            id: "matrix_ones_square",
+            label: "Square all-ones matrix",
+            description: "A dense matrix with every entry equal to 1.",
+            source: "2",
+          },
+        ],
+      }
+    DocFunction::MatrixDet =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "det",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "Matrix.det(matrix: Matrix) -> Expr",
+        summary: "Compute the determinant of a dense matrix literal.",
+        narrative: "Determinants are the first scalar invariant most readers check when moving from matrix construction to matrix analysis.",
+        interpretation: "The input is still a nested tuple. The runner materializes the dense matrix, displays it, and then computes the determinant as a symbolic scalar expression.",
+        examples: [
+          {
+            id: "matrix_det_numeric",
+            label: "Numeric 2x2 determinant",
+            description: "A compact baseline determinant computation.",
+            source: "((1, 2), (3, 4))",
+          },
+          {
+            id: "matrix_det_symbolic",
+            label: "Symbolic 2x2 determinant",
+            description: "A symbolic determinant that stays factorable by inspection.",
+            source: "((a, b), (c, d))",
+          },
+        ],
+      }
+    DocFunction::MatrixTrace =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "trace",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "Matrix.trace(matrix: Matrix) -> Expr",
+        summary: "Compute the trace of a dense matrix literal.",
+        narrative: "Trace complements determinant as a simple scalar invariant and keeps symbolic matrix output compact enough for side-by-side reading.",
+        interpretation: "The runner constructs the dense matrix from nested tuples and then sums the diagonal entries symbolically.",
+        examples: [
+          {
+            id: "matrix_trace_symbolic",
+            label: "Symbolic symmetric trace",
+            description: "A small symbolic matrix whose trace collapses immediately.",
+            source: "((1, x), (x, 1))",
+          },
+          {
+            id: "matrix_trace_diagonal",
+            label: "Three-by-three diagonal trace",
+            description: "A direct diagonal example.",
+            source: "((1, 0, 0), (0, 2, 0), (0, 0, 3))",
           },
         ],
       }
@@ -1764,6 +2102,13 @@ fn function_topic(id : DocFunction) -> String {
     DocFunction::SeriesExpand => "series"
     DocFunction::Limit => "series"
     DocFunction::Residue => "series"
+    DocFunction::AssumeIsInteger => "assumptions"
+    DocFunction::AssumeIsReal => "assumptions"
+    DocFunction::AssumeIsPositive => "assumptions"
+    DocFunction::LogicSimplify => "logic"
+    DocFunction::LogicToCnf => "logic"
+    DocFunction::LogicToDnf => "logic"
+    DocFunction::LogicSatisfiable => "logic"
     DocFunction::SetInterval => "sets"
     DocFunction::SetFinite => "sets"
     DocFunction::SetContains => "sets"
@@ -1774,6 +2119,12 @@ fn function_topic(id : DocFunction) -> String {
     DocFunction::DiscreteIFFT => "discrete"
     DocFunction::DiscreteFWHT => "discrete"
     DocFunction::DiscreteMobius => "discrete"
+    DocFunction::MatrixConstruct => "matrices"
+    DocFunction::MatrixEye => "matrices"
+    DocFunction::MatrixZeros => "matrices"
+    DocFunction::MatrixOnes => "matrices"
+    DocFunction::MatrixDet => "matrices"
+    DocFunction::MatrixTrace => "matrices"
     DocFunction::TermsGcd => "polys"
     DocFunction::PolyFactor => "polys"
     DocFunction::PolyFactorList => "polys"
@@ -1840,6 +2191,13 @@ fn function_input_format(id : DocFunction) -> String {
     DocFunction::SeriesExpand => "expr"
     DocFunction::Limit => "expr"
     DocFunction::Residue => "expr"
+    DocFunction::AssumeIsInteger => "expr"
+    DocFunction::AssumeIsReal => "expr"
+    DocFunction::AssumeIsPositive => "expr"
+    DocFunction::LogicSimplify => "logic expr"
+    DocFunction::LogicToCnf => "logic expr"
+    DocFunction::LogicToDnf => "logic expr"
+    DocFunction::LogicSatisfiable => "logic expr"
     DocFunction::SetInterval => "tuple"
     DocFunction::SetFinite => "tuple"
     DocFunction::SetContains => "tuple"
@@ -1850,6 +2208,12 @@ fn function_input_format(id : DocFunction) -> String {
     DocFunction::DiscreteIFFT => "tuple"
     DocFunction::DiscreteFWHT => "tuple"
     DocFunction::DiscreteMobius => "tuple"
+    DocFunction::MatrixConstruct => "((row1), (row2), ...)"
+    DocFunction::MatrixEye => "n"
+    DocFunction::MatrixZeros => "n or (rows, cols)"
+    DocFunction::MatrixOnes => "n or (rows, cols)"
+    DocFunction::MatrixDet => "((row1), (row2), ...)"
+    DocFunction::MatrixTrace => "((row1), (row2), ...)"
     DocFunction::TermsGcd => "expr"
     DocFunction::PolyFactor => "expr"
     DocFunction::PolyFactorList => "expr"

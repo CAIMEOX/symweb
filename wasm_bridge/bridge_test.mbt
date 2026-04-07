@@ -20,15 +20,14 @@ fn bridge_response_json() -> String {
 test "plain wasm bridge round-trips JSON evaluation requests" {
   let payload = @json.parse(bridge_response_json())
   match payload {
-    Array([
-      String("Success"),
-      Object(result),
-    ]) => {
+    Array([String("Success"), Object(result)]) => {
       guard result.get("parsed_expression") == Some(Json::string("2*x")) else {
         fail("Unexpected parsed expression payload: \{payload.stringify()}")
       }
       guard result.get("fields") is Some(Array([Object(field), ..])) else {
-        fail("Expected at least one result field in payload: \{payload.stringify()}")
+        fail(
+          "Expected at least one result field in payload: \{payload.stringify()}",
+        )
       }
       assert_eq(field.get("label"), Some(Json::string("Result")))
       assert_eq(field.get("value"), Some(Json::string("2*x")))

@@ -4,9 +4,12 @@ priv enum DocPackage {
   SymCalculus
   SymIntegrals
   SymSeries
+  SymAssume
+  SymLogic
   SymSets
   SymConcrete
   SymDiscrete
+  SymMatrices
   SymPolys
   SymNTheory
   SymPhysics
@@ -25,6 +28,13 @@ priv enum DocFunction {
   SeriesExpand
   Limit
   Residue
+  AssumeIsInteger
+  AssumeIsReal
+  AssumeIsPositive
+  LogicSimplify
+  LogicToCnf
+  LogicToDnf
+  LogicSatisfiable
   SetInterval
   SetFinite
   SetContains
@@ -35,6 +45,12 @@ priv enum DocFunction {
   DiscreteIFFT
   DiscreteFWHT
   DiscreteMobius
+  MatrixConstruct
+  MatrixEye
+  MatrixZeros
+  MatrixOnes
+  MatrixDet
+  MatrixTrace
   TermsGcd
   PolyFactor
   PolyFactorList

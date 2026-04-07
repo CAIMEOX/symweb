@@ -77,6 +77,22 @@ fn expr_latex(expr : @symbit.Expr) -> String {
 }
 
 ///|
+fn bool_field(
+  label : String,
+  expr : @symlogic.BoolExpr,
+) -> @common.ResultField {
+  plain_field(label, logic_expr_text(expr))
+}
+
+///|
+fn sat_result_field(
+  label : String,
+  result : @symlogic.SatResult,
+) -> @common.ResultField {
+  plain_field(label, result.to_string())
+}
+
+///|
 fn expr_list_text(items : Array[@symbit.Expr]) -> String {
   "[" + items.map(expr_text).join(", ") + "]"
 }
@@ -131,6 +147,63 @@ fn set_bool_text(value : @symsets.SetBool) -> String {
     @symsets.SetBool::True => "True"
     @symsets.SetBool::False => "False"
     @symsets.SetBool::Unknown => "Unknown"
+  }
+}
+
+///|
+fn tri_text(value : @symassume.Tri) -> String {
+  match value {
+    @symassume.Tri::True => "True"
+    @symassume.Tri::False => "False"
+    @symassume.Tri::Unknown => "Unknown"
+  }
+}
+
+///|
+fn dense_matrix_text(matrix : @symmatrices.Matrix) -> String {
+  normalize_output(matrix.to_string())
+}
+
+///|
+fn dense_matrix_latex(matrix : @symmatrices.Matrix) -> String {
+  matrix.latex()
+}
+
+///|
+fn dense_matrix_field(
+  label : String,
+  matrix : @symmatrices.Matrix,
+) -> @common.ResultField {
+  latex_field(label, dense_matrix_text(matrix), dense_matrix_latex(matrix))
+}
+
+///|
+fn matrix_shape_text(matrix : @symmatrices.Matrix) -> String {
+  let (rows, cols) = matrix.shape()
+  "(\{rows}, \{cols})"
+}
+
+///|
+fn matrix_from_row_args(
+  row_exprs : Array[@symbit.Expr],
+  usage : String,
+) -> Result[@symmatrices.Matrix, String] {
+  if row_exprs.is_empty() {
+    return Err("Expected nested tuple rows in \{usage}.")
+  }
+  let rows : Array[Array[@symbit.Expr]] = []
+  for row_expr in row_exprs {
+    match @symcore.tuple_items(row_expr) {
+      Some(items) => rows.push(items)
+      None => return Err("Expected each matrix row to be a tuple in \{usage}.")
+    }
+  }
+  let matrix_result : Result[@symmatrices.Matrix, @symmatrices.MatrixError] = try? @symmatrices.matrix(
+    rows,
+  )
+  match matrix_result {
+    Err(error) => Err(error.to_string())
+    Ok(matrix) => Ok(matrix)
   }
 }
 
@@ -545,6 +618,39 @@ pub fn evaluate_request(
       "Enter a symbolic expression before running the reference example.",
     )
   }
+  if is_logic_function_id(request.function_id) {
+    let logic_result = parse_logic_expr_source(trimmed.to_string())
+    match logic_result {
+      Err(message) => return @common.KernelEvalState::Failure(message)
+      Ok(bool_expr) => {
+        let parsed_expression = logic_expr_text(bool_expr)
+        let structural_form = logic_expr_structural_form(bool_expr)
+        let finish_logic = fn(fields : Array[@common.ResultField]) {
+          @common.KernelEvalState::Success({
+            parsed_expression,
+            parsed_latex: None,
+            structural_form,
+            fields,
+          })
+        }
+        return match request.function_id {
+          "logic_simplify" =>
+            finish_logic([
+              bool_field("Result", @symlogic.simplify_logic(bool_expr)),
+            ])
+          "logic_to_cnf" =>
+            finish_logic([bool_field("Result", @symlogic.to_cnf(bool_expr))])
+          "logic_to_dnf" =>
+            finish_logic([bool_field("Result", @symlogic.to_dnf(bool_expr))])
+          "logic_satisfiable" =>
+            finish_logic([
+              sat_result_field("Result", @symlogic.satisfiable(bool_expr)),
+            ])
+          _ => unknown_function(request.function_id)
+        }
+      }
+    }
+  }
   let options = parser_settings_to_options(request.parser)
   let parsed_result : Result[@symbit.Expr, @symparse.ParseError] = try? @symparse.parse_expr_with(
     trimmed.to_string(),
@@ -659,6 +765,21 @@ pub fn evaluate_request(
               ])
           }
         }
+        "assume_is_integer" =>
+          finish([
+            expr_field("Input", expr),
+            plain_field("Result", tri_text(@symassume.is_integer(expr))),
+          ])
+        "assume_is_real" =>
+          finish([
+            expr_field("Input", expr),
+            plain_field("Result", tri_text(@symassume.is_real(expr))),
+          ])
+        "assume_is_positive" =>
+          finish([
+            expr_field("Input", expr),
+            plain_field("Result", tri_text(@symassume.is_positive(expr))),
+          ])
         "set_interval" =>
           match require_arg_count(args, [2], "interval(left, right)") {
             Err(message) => @common.KernelEvalState::Failure(message)
@@ -668,7 +789,7 @@ pub fn evaluate_request(
                 set_field("Result", @symsets.interval(args[0], args[1])),
               ])
           }
-        "set_finite" => {
+        "set_finite" =>
           if args.is_empty() {
             @common.KernelEvalState::Failure(
               "Expected at least 1 argument in finite_set(a1, a2, ...).",
@@ -679,7 +800,6 @@ pub fn evaluate_request(
               set_field("Result", @symsets.finite_set(args)),
             ])
           }
-        }
         "set_contains" =>
           match require_arg_count(args, [3], "contains(value, left, right)") {
             Err(message) => @common.KernelEvalState::Failure(message)
@@ -732,16 +852,15 @@ pub fn evaluate_request(
             expr_field("Input", expr),
             expr_field("Result", @symconcrete.rationalize(expr)),
           ])
-        "discrete_fft" => {
+        "discrete_fft" =>
           if args.is_empty() {
             @common.KernelEvalState::Failure(
               "Expected at least 1 argument in fft(a0, a1, ...).",
             )
           } else {
-            let result : Result[
-              Array[@symbit.Expr],
-              @symdiscrete.DiscreteError,
-            ] = try? @symdiscrete.fft(args)
+            let result : Result[Array[@symbit.Expr], @symdiscrete.DiscreteError] = try? @symdiscrete.fft(
+              args,
+            )
             match result {
               Err(error) => @common.KernelEvalState::Failure(error.to_string())
               Ok(values) =>
@@ -751,17 +870,15 @@ pub fn evaluate_request(
                 ])
             }
           }
-        }
-        "discrete_ifft" => {
+        "discrete_ifft" =>
           if args.is_empty() {
             @common.KernelEvalState::Failure(
               "Expected at least 1 argument in ifft(a0, a1, ...).",
             )
           } else {
-            let result : Result[
-              Array[@symbit.Expr],
-              @symdiscrete.DiscreteError,
-            ] = try? @symdiscrete.ifft(args)
+            let result : Result[Array[@symbit.Expr], @symdiscrete.DiscreteError] = try? @symdiscrete.ifft(
+              args,
+            )
             match result {
               Err(error) => @common.KernelEvalState::Failure(error.to_string())
               Ok(values) =>
@@ -771,8 +888,7 @@ pub fn evaluate_request(
                 ])
             }
           }
-        }
-        "discrete_fwht" => {
+        "discrete_fwht" =>
           if args.is_empty() {
             @common.KernelEvalState::Failure(
               "Expected at least 1 argument in fwht(a0, a1, ...).",
@@ -783,8 +899,7 @@ pub fn evaluate_request(
               expr_list_field("Result", @symdiscrete.fwht(args)),
             ])
           }
-        }
-        "discrete_mobius" => {
+        "discrete_mobius" =>
           if args.is_empty() {
             @common.KernelEvalState::Failure(
               "Expected at least 1 argument in mobius_transform(a0, a1, ...).",
@@ -795,7 +910,129 @@ pub fn evaluate_request(
               expr_list_field("Result", @symdiscrete.mobius_transform(args)),
             ])
           }
-        }
+        "matrix_construct" =>
+          match matrix_from_row_args(args, "matrix(((...), (...), ...))") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(matrix) =>
+              finish([
+                plain_field("Shape", matrix_shape_text(matrix)),
+                dense_matrix_field("Result", matrix),
+              ])
+          }
+        "matrix_eye" =>
+          match require_arg_count(args, [1], "eye(n)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) =>
+              match require_int_args(args, "eye(n)") {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(values) => {
+                  let matrix_result : Result[
+                    @symmatrices.Matrix,
+                    @symmatrices.MatrixError,
+                  ] = try? @symmatrices.eye(values[0])
+                  match matrix_result {
+                    Err(error) =>
+                      @common.KernelEvalState::Failure(error.to_string())
+                    Ok(matrix) =>
+                      finish([
+                        plain_field("Shape", matrix_shape_text(matrix)),
+                        dense_matrix_field("Result", matrix),
+                      ])
+                  }
+                }
+              }
+          }
+        "matrix_zeros" =>
+          match
+            require_arg_count(args, [1, 2], "zeros(n) or zeros(rows, cols)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) =>
+              match require_int_args(args, "zeros(n) or zeros(rows, cols)") {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(values) => {
+                  let matrix_result : Result[
+                    @symmatrices.Matrix,
+                    @symmatrices.MatrixError,
+                  ] = match values {
+                    [rows] => try? @symmatrices.zeros(rows)
+                    [rows, cols] =>
+                      try? @symmatrices.zeros(rows, cols=Some(cols))
+                    _ =>
+                      Err(@symmatrices.MatrixError::ValueError("unreachable"))
+                  }
+                  match matrix_result {
+                    Err(error) =>
+                      @common.KernelEvalState::Failure(error.to_string())
+                    Ok(matrix) =>
+                      finish([
+                        plain_field("Shape", matrix_shape_text(matrix)),
+                        dense_matrix_field("Result", matrix),
+                      ])
+                  }
+                }
+              }
+          }
+        "matrix_ones" =>
+          match require_arg_count(args, [1, 2], "ones(n) or ones(rows, cols)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) =>
+              match require_int_args(args, "ones(n) or ones(rows, cols)") {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(values) => {
+                  let matrix_result : Result[
+                    @symmatrices.Matrix,
+                    @symmatrices.MatrixError,
+                  ] = match values {
+                    [rows] => try? @symmatrices.ones(rows)
+                    [rows, cols] =>
+                      try? @symmatrices.ones(rows, cols=Some(cols))
+                    _ =>
+                      Err(@symmatrices.MatrixError::ValueError("unreachable"))
+                  }
+                  match matrix_result {
+                    Err(error) =>
+                      @common.KernelEvalState::Failure(error.to_string())
+                    Ok(matrix) =>
+                      finish([
+                        plain_field("Shape", matrix_shape_text(matrix)),
+                        dense_matrix_field("Result", matrix),
+                      ])
+                  }
+                }
+              }
+          }
+        "matrix_det" =>
+          match matrix_from_row_args(args, "det(((...), (...), ...))") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(matrix) => {
+              let det_result : Result[@symbit.Expr, @symmatrices.MatrixError] = try? matrix.det()
+              match det_result {
+                Err(error) =>
+                  @common.KernelEvalState::Failure(error.to_string())
+                Ok(value) =>
+                  finish([
+                    dense_matrix_field("Matrix", matrix),
+                    expr_field("Result", value),
+                  ])
+              }
+            }
+          }
+        "matrix_trace" =>
+          match matrix_from_row_args(args, "trace(((...), (...), ...))") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(matrix) => {
+              let trace_result : Result[@symbit.Expr, @symmatrices.MatrixError] = try? matrix.trace()
+              match trace_result {
+                Err(error) =>
+                  @common.KernelEvalState::Failure(error.to_string())
+                Ok(value) =>
+                  finish([
+                    dense_matrix_field("Matrix", matrix),
+                    expr_field("Result", value),
+                  ])
+              }
+            }
+          }
         "terms_gcd" => {
           let poly_result : Result[@sympolys.Poly, @sympolys.PolyError] = try? @sympolys.Poly::from_expr_defaults(
             expr,

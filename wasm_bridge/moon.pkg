@@ -8,6 +8,7 @@ import {
 options(
   link: {
     "wasm": {
+      "export-memory-name": "memory",
       "exports": [
         "kernel_reset_request",
         "kernel_push_request_byte",
@@ -15,7 +16,6 @@ options(
         "kernel_result_length",
         "kernel_result_byte",
       ],
-      "export-memory-name": "memory",
     },
   },
 )

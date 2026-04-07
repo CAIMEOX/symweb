@@ -349,7 +349,10 @@ fn update(
     DocMsg::CheckKernelReady =>
       match wasm_kernel_status() {
         "loading" =>
-          (@rabbita.delay(dispatch(DocMsg::CheckKernelReady), kernel_poll_ms()), model)
+          (
+            @rabbita.delay(dispatch(DocMsg::CheckKernelReady), kernel_poll_ms()),
+            model,
+          )
         _ => (@rabbita.none, recompute_model(model))
       }
     DocMsg::OpenSettings => (@rabbita.none, { ..model, settings_open: true })
@@ -462,7 +465,11 @@ pub fn algebra_app() -> @rabbita.Cell {
 ///|
 #cfg(target="js")
 pub fn algebra_web_app() -> @rabbita.App {
-  let (dispatch, cell) = @rabbita.cell_with_dispatch(model=default_model(), update~, view~)
+  let (dispatch, cell) = @rabbita.cell_with_dispatch(
+    model=default_model(),
+    update~,
+    view~,
+  )
   let app = @rabbita.new(cell)
   app.with_init(dispatch(DocMsg::CheckKernelReady))
   app
