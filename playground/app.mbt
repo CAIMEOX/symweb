@@ -194,6 +194,24 @@ fn parser_button(
 }
 
 ///|
+fn theme_button(
+  dispatch : @rabbita.Dispatch[DocMsg],
+  model : DocModel,
+  mode : ThemeMode,
+) -> @html.Html {
+  button(
+    class=parser_button_class(model.theme_mode == mode),
+    type_="button",
+    title=theme_mode_help(mode),
+    on_click=dispatch(DocMsg::SetThemeMode(mode)),
+    [
+      span(class="parser-state", if model.theme_mode == mode { "on" } else { "off" }),
+      span(class="parser-copy", theme_mode_label(mode)),
+    ],
+  )
+}
+
+///|
 fn result_panel(model : DocModel) -> @html.Html {
   match model.result {
     EvalState::Failure(message) =>
@@ -233,6 +251,13 @@ fn settings_modal(
           type_="button",
           on_click=dispatch(DocMsg::CloseSettings),
           "Close",
+        ),
+      ]),
+      div(class="settings-section", [
+        h2("Theme"),
+        div(
+          class="parser-grid settings-theme-grid",
+          theme_mode_catalog().map(mode => theme_button(dispatch, model, mode)),
         ),
       ]),
       div(class="settings-section", [
@@ -357,6 +382,10 @@ fn update(
       }
     DocMsg::OpenSettings => (@rabbita.none, { ..model, settings_open: true })
     DocMsg::CloseSettings => (@rabbita.none, { ..model, settings_open: false })
+    DocMsg::SetThemeMode(theme_mode) => {
+      apply_theme_mode(theme_mode_token(theme_mode))
+      (@rabbita.none, { ..model, theme_mode })
+    }
     DocMsg::ToggleStructuralFormDisplay =>
       (
         @rabbita.none,

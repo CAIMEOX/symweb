@@ -10,8 +10,111 @@
   --accent: #f4f4f4;
   --accent-soft: rgba(255, 255, 255, 0.08);
   --warn: #d88383;
+  --page-grid-rgb: 255, 255, 255;
+  --page-grid-alpha: 0.018;
+  --page-start: #010101;
+  --page-end: #050505;
+  --page-glow-a: rgba(255, 255, 255, 0.035);
+  --page-glow-b: rgba(255, 255, 255, 0.025);
+  --topbar-start: #0c0c0c;
+  --topbar-end: #080808;
+  --sidebar-start: #101010;
+  --sidebar-end: #0a0a0a;
+  --runner-start: #121212;
+  --runner-end: #0d0d0d;
+  --settings-start: #111111;
+  --settings-end: #090909;
+  --card-bg: rgba(255, 255, 255, 0.025);
+  --tree-hover-bg: rgba(255, 255, 255, 0.03);
+  --editor-bg: #060606;
+  --backdrop: rgba(0, 0, 0, 0.72);
+  --danger-start: rgba(58, 24, 24, 0.22);
+  --danger-end: rgba(18, 10, 10, 0.96);
+  --danger-border: rgba(217, 143, 115, 0.55);
+  --danger-text: #f5c7b9;
   --mono: "JetBrains Mono", "IBM Plex Mono", "Fira Code", "SFMono-Regular", Menlo, Consolas, monospace;
   --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f3f3f3;
+  --bg-elevated: #fcfcfc;
+  --panel: #ffffff;
+  --panel-strong: #f6f6f6;
+  --ink: #111111;
+  --muted: #5d5d5d;
+  --line: #d9d9d9;
+  --line-strong: #b8b8b8;
+  --accent: #111111;
+  --accent-soft: rgba(0, 0, 0, 0.05);
+  --warn: #9e4f4f;
+  --page-grid-rgb: 0, 0, 0;
+  --page-grid-alpha: 0.04;
+  --page-start: #fafafa;
+  --page-end: #ececec;
+  --page-glow-a: rgba(0, 0, 0, 0.035);
+  --page-glow-b: rgba(0, 0, 0, 0.025);
+  --topbar-start: #ffffff;
+  --topbar-end: #f0f0f0;
+  --sidebar-start: #fcfcfc;
+  --sidebar-end: #f2f2f2;
+  --runner-start: #ffffff;
+  --runner-end: #f5f5f5;
+  --settings-start: #ffffff;
+  --settings-end: #f2f2f2;
+  --card-bg: rgba(0, 0, 0, 0.02);
+  --tree-hover-bg: rgba(0, 0, 0, 0.04);
+  --editor-bg: #ffffff;
+  --backdrop: rgba(16, 16, 16, 0.38);
+  --danger-start: rgba(176, 74, 74, 0.08);
+  --danger-end: rgba(255, 255, 255, 0.96);
+  --danger-border: rgba(158, 79, 79, 0.42);
+  --danger-text: #7a2d2d;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    --bg: #f3f3f3;
+    --bg-elevated: #fcfcfc;
+    --panel: #ffffff;
+    --panel-strong: #f6f6f6;
+    --ink: #111111;
+    --muted: #5d5d5d;
+    --line: #d9d9d9;
+    --line-strong: #b8b8b8;
+    --accent: #111111;
+    --accent-soft: rgba(0, 0, 0, 0.05);
+    --warn: #9e4f4f;
+    --page-grid-rgb: 0, 0, 0;
+    --page-grid-alpha: 0.04;
+    --page-start: #fafafa;
+    --page-end: #ececec;
+    --page-glow-a: rgba(0, 0, 0, 0.035);
+    --page-glow-b: rgba(0, 0, 0, 0.025);
+    --topbar-start: #ffffff;
+    --topbar-end: #f0f0f0;
+    --sidebar-start: #fcfcfc;
+    --sidebar-end: #f2f2f2;
+    --runner-start: #ffffff;
+    --runner-end: #f5f5f5;
+    --settings-start: #ffffff;
+    --settings-end: #f2f2f2;
+    --card-bg: rgba(0, 0, 0, 0.02);
+    --tree-hover-bg: rgba(0, 0, 0, 0.04);
+    --editor-bg: #ffffff;
+    --backdrop: rgba(16, 16, 16, 0.38);
+    --danger-start: rgba(176, 74, 74, 0.08);
+    --danger-end: rgba(255, 255, 255, 0.96);
+    --danger-border: rgba(158, 79, 79, 0.42);
+    --danger-text: #7a2d2d;
+    color-scheme: light;
+  }
 }
 
 * {
@@ -21,9 +124,9 @@
 html {
   height: 100%;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(180deg, #010101 0%, #050505 100%);
+    linear-gradient(90deg, rgba(var(--page-grid-rgb), var(--page-grid-alpha)) 1px, transparent 1px),
+    linear-gradient(rgba(var(--page-grid-rgb), var(--page-grid-alpha)) 1px, transparent 1px),
+    linear-gradient(180deg, var(--page-start) 0%, var(--page-end) 100%);
   background-size: 28px 28px, 28px 28px, auto;
   color: var(--ink);
 }
@@ -33,8 +136,8 @@ body {
   min-height: 100vh;
   height: 100%;
   background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.035), transparent 18%),
-    radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.025), transparent 24%);
+    radial-gradient(circle at top right, var(--page-glow-a), transparent 18%),
+    radial-gradient(circle at bottom left, var(--page-glow-b), transparent 24%);
   color: var(--ink);
   font-family: var(--mono);
 }
@@ -62,7 +165,7 @@ body {
   min-height: 68px;
   padding: 0 24px;
   border: 1px solid var(--line-strong);
-  background: linear-gradient(180deg, #0c0c0c, #080808);
+  background: linear-gradient(180deg, var(--topbar-start), var(--topbar-end));
 }
 
 .topbar-actions {
@@ -180,7 +283,7 @@ body {
 }
 
 .sidebar-panel {
-  background: linear-gradient(180deg, #101010, #0a0a0a);
+  background: linear-gradient(180deg, var(--sidebar-start), var(--sidebar-end));
 }
 
 .nav-stack,
@@ -308,7 +411,7 @@ body {
 .tree-function-button:hover {
   color: var(--ink);
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--tree-hover-bg);
 }
 
 .tree-function-button-active {
@@ -338,7 +441,7 @@ body {
 }
 
 .runner-panel {
-  background: linear-gradient(180deg, #121212, #0d0d0d);
+  background: linear-gradient(180deg, var(--runner-start), var(--runner-end));
 }
 
 .settings-modal-hidden {
@@ -353,7 +456,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--backdrop);
 }
 
 .settings-dialog {
@@ -361,7 +464,7 @@ body {
   max-height: min(80vh, 720px);
   overflow-y: auto;
   border-color: var(--line-strong);
-  background: linear-gradient(180deg, #111111, #090909);
+  background: linear-gradient(180deg, var(--settings-start), var(--settings-end));
 }
 
 .settings-header {
@@ -400,7 +503,7 @@ body {
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--card-bg);
 }
 
 .result-label {
@@ -464,7 +567,7 @@ body {
   min-height: 240px;
   padding: 18px;
   border: 1px solid var(--line-strong);
-  background: #060606;
+  background: var(--editor-bg);
   color: var(--ink);
   resize: vertical;
   font-family: var(--mono);
@@ -518,15 +621,15 @@ body {
 }
 
 .panel-danger {
-  border-color: rgba(217, 143, 115, 0.55);
-  background: linear-gradient(180deg, rgba(58, 24, 24, 0.22), rgba(18, 10, 10, 0.96));
+  border-color: var(--danger-border);
+  background: linear-gradient(180deg, var(--danger-start), var(--danger-end));
 }
 
 .error-block {
   margin-top: 16px;
   padding: 16px;
-  border: 1px solid rgba(217, 143, 115, 0.4);
-  color: #f5c7b9;
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
 }
 
 @media (max-width: 1120px) {

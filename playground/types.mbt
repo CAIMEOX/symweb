@@ -115,6 +115,13 @@ priv enum ParserToggle {
 }
 
 ///|
+priv enum ThemeMode {
+  System
+  Light
+  Dark
+} derive(Eq)
+
+///|
 priv struct ParserSettings {
   caret_as_power : Bool
   evaluate : Bool
@@ -183,6 +190,7 @@ priv struct DocModel {
   active_example : String
   draft_source : String
   parser : ParserSettings
+  theme_mode : ThemeMode
   show_structural_form : Bool
   result : EvalState
   dirty : Bool
@@ -197,6 +205,7 @@ priv enum DocMsg {
   CheckKernelReady
   OpenSettings
   CloseSettings
+  SetThemeMode(ThemeMode)
   ToggleStructuralFormDisplay
   TogglePackageNode(DocPackage)
   SelectPackage(DocPackage)

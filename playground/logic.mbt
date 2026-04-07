@@ -12,6 +12,38 @@ fn default_parser_settings() -> ParserSettings {
 }
 
 ///|
+fn theme_mode_label(mode : ThemeMode) -> String {
+  match mode {
+    ThemeMode::System => "System"
+    ThemeMode::Light => "Light"
+    ThemeMode::Dark => "Dark"
+  }
+}
+
+///|
+fn theme_mode_help(mode : ThemeMode) -> String {
+  match mode {
+    ThemeMode::System => "Follow the browser and operating-system color scheme."
+    ThemeMode::Light => "Force the interface into a light theme."
+    ThemeMode::Dark => "Force the interface into a dark theme."
+  }
+}
+
+///|
+fn theme_mode_catalog() -> Array[ThemeMode] {
+  [ThemeMode::System, ThemeMode::Light, ThemeMode::Dark]
+}
+
+///|
+fn theme_mode_token(mode : ThemeMode) -> String {
+  match mode {
+    ThemeMode::System => "system"
+    ThemeMode::Light => "light"
+    ThemeMode::Dark => "dark"
+  }
+}
+
+///|
 fn parser_toggle_label(toggle : ParserToggle) -> String {
   match toggle {
     ParserToggle::CaretAsPower => "Caret As Power"
@@ -333,6 +365,22 @@ fn kernel_poll_ms() -> Int {
 
 ///|
 #cfg(target="js")
+extern "js" fn apply_theme_mode(token : String) =
+  #| function(token) {
+  #|   if (typeof document === "undefined" || !document.documentElement) {
+  #|     return;
+  #|   }
+  #|   document.documentElement.setAttribute("data-theme", token);
+  #| }
+
+///|
+#cfg(not(target="js"))
+fn apply_theme_mode(_token : String) -> Unit {
+  ()
+}
+
+///|
+#cfg(target="js")
 extern "js" fn wasm_kernel_status() -> String =
   #| function() {
   #|   if (typeof globalThis.__symwebKernel !== "undefined" && globalThis.__symwebKernel !== null) {
@@ -477,6 +525,8 @@ fn default_model() -> DocModel {
   let pkg = default_package()
   let function_id = default_function(pkg)
   let example = default_example(function_id)
+  let theme_mode = ThemeMode::System
+  apply_theme_mode(theme_mode_token(theme_mode))
   recompute_model({
     active_package: pkg,
     active_function: function_id,
@@ -484,6 +534,7 @@ fn default_model() -> DocModel {
     active_example: example.id,
     draft_source: example.source,
     parser: default_parser_settings(),
+    theme_mode,
     show_structural_form: true,
     result: EvalState::Failure(kernel_loading_message()),
     dirty: false,
