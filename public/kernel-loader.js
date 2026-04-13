@@ -14,7 +14,11 @@
     if (!response.ok) {
       throw new Error(`Kernel fetch failed: ${response.status}`);
     }
-    const imports = {};
+    const imports = {
+      spectest: {
+        print_char() {},
+      },
+    };
     if (typeof WebAssembly.instantiateStreaming === "function") {
       try {
         return await WebAssembly.instantiateStreaming(response.clone(), imports);

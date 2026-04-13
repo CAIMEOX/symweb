@@ -303,14 +303,36 @@ test "kernel plot front door returns sampled line payload" {
   match evaluate_request(request) {
     @common.KernelEvalState::Failure(message) =>
       fail("plot failed: \{message}")
-    @common.KernelEvalState::Success(payload) =>
+    @common.KernelEvalState::Success(payload) => {
       match payload.fields[0].plot {
-        Some(@common.PlotPayload::Line(points)) =>
+        Some(@common.PlotPayload::Line(points)) => {
           if points.length() < 20 {
             fail("expected a sampled line plot payload")
           }
+          let mut min_y = points[0].y
+          let mut max_y = points[0].y
+          let mut strong_interior_points = 0
+          for point in points {
+            if point.y < min_y {
+              min_y = point.y
+            }
+            if point.y > max_y {
+              max_y = point.y
+            }
+            if point.x > -3.0 && point.x < 3.0 && point.y.abs() > 1.0 {
+              strong_interior_points = strong_interior_points + 1
+            }
+          }
+          if max_y - min_y < 20.0 {
+            fail("expected non-degenerate cubic line plot, received near-flat samples")
+          }
+          if strong_interior_points < 10 {
+            fail("expected interior cubic samples to deviate materially from zero")
+          }
+        }
         _ => fail("expected line plot payload")
       }
+    }
   }
 }
 

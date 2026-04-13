@@ -1,32 +1,60 @@
 import { spawn, spawnSync } from 'node:child_process'
-import { mkdirSync, copyFileSync, existsSync } from 'node:fs'
+import { mkdirSync, copyFileSync, existsSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const workspaceRoot = path.resolve(__dirname, '..')
 const basePath = normalizeBasePath(process.env.SYMWEB_BASE_PATH ?? '/')
 const moonJsArgs = ['build', 'cmd/web', '--target', 'js']
 const moonWasmArgs = ['build', 'wasm_bridge', '--target', 'wasm', '--release']
-const moonJsOutput = path.join(
-  __dirname,
-  '_build',
-  'js',
-  'debug',
-  'build',
-  'cmd',
-  'web',
-  'web.js',
-)
-const moonWasmOutput = path.join(
-  __dirname,
-  '_build',
-  'wasm',
-  'release',
-  'build',
-  'wasm_bridge',
-  'wasm_bridge.wasm',
-)
+const moonJsOutputs = [
+  path.join(
+    workspaceRoot,
+    '_build',
+    'js',
+    'debug',
+    'build',
+    'CAIMEOX',
+    'symweb',
+    'cmd',
+    'web',
+    'web.js',
+  ),
+  path.join(
+    __dirname,
+    '_build',
+    'js',
+    'debug',
+    'build',
+    'cmd',
+    'web',
+    'web.js',
+  ),
+]
+const moonWasmOutputs = [
+  path.join(
+    workspaceRoot,
+    '_build',
+    'wasm',
+    'release',
+    'build',
+    'CAIMEOX',
+    'symweb',
+    'wasm_bridge',
+    'wasm_bridge.wasm',
+  ),
+  path.join(
+    __dirname,
+    '_build',
+    'wasm',
+    'release',
+    'build',
+    'wasm_bridge',
+    'wasm_bridge.wasm',
+  ),
+]
 const generatedDir = path.join(__dirname, 'public', 'generated')
 const generatedEntry = path.join(generatedDir, 'web.js')
 const generatedKernel = path.join(generatedDir, 'symweb-kernel.wasm')
@@ -55,13 +83,23 @@ function runMoonBuild(args) {
   }
 }
 
+function latestMoonOutput(candidates, kind) {
+  const existing = candidates
+    .filter(candidate => existsSync(candidate))
+    .map(candidate => ({
+      path: candidate,
+      mtimeMs: statSync(candidate).mtimeMs,
+    }))
+    .sort((left, right) => right.mtimeMs - left.mtimeMs)
+  if (existing.length == 0) {
+    throw new Error(`MoonBit ${kind} output not found. Tried: ${candidates.join(', ')}`)
+  }
+  return existing[0].path
+}
+
 function syncMoonEntry() {
-  if (!existsSync(moonJsOutput)) {
-    throw new Error(`MoonBit JS output not found: ${moonJsOutput}`)
-  }
-  if (!existsSync(moonWasmOutput)) {
-    throw new Error(`MoonBit wasm output not found: ${moonWasmOutput}`)
-  }
+  const moonJsOutput = latestMoonOutput(moonJsOutputs, 'JS')
+  const moonWasmOutput = latestMoonOutput(moonWasmOutputs, 'wasm')
   mkdirSync(generatedDir, { recursive: true })
   copyFileSync(moonJsOutput, generatedEntry)
   copyFileSync(moonWasmOutput, generatedKernel)
@@ -111,13 +149,17 @@ function moonbitDevPlugin() {
       runMoonBuild(moonWasmArgs)
       syncMoonEntry()
 
-      server.watcher.add(moonJsOutput)
-      server.watcher.add(moonWasmOutput)
+      for (const output of moonJsOutputs) {
+        server.watcher.add(output)
+      }
+      for (const output of moonWasmOutputs) {
+        server.watcher.add(output)
+      }
       server.watcher.on('change', (changedPath) => {
         const resolved = path.resolve(changedPath)
         if (
-          resolved === path.resolve(moonJsOutput) ||
-          resolved === path.resolve(moonWasmOutput)
+          moonJsOutputs.some(output => resolved === path.resolve(output)) ||
+          moonWasmOutputs.some(output => resolved === path.resolve(output))
         ) {
           refreshGeneratedEntry(server)
         }

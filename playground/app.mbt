@@ -81,6 +81,16 @@ fn plot_padding() -> Int {
 }
 
 ///|
+fn plot_inner_width() -> Int {
+  plot_width() - 2 * plot_padding()
+}
+
+///|
+fn plot_inner_height() -> Int {
+  plot_height() - 2 * plot_padding()
+}
+
+///|
 fn double_min(a : Double, b : Double) -> Double {
   if a <= b { a } else { b }
 }
@@ -97,24 +107,83 @@ fn plot_value_span(min_value : Double, max_value : Double) -> Double {
 }
 
 ///|
+fn plot_units_per_pixel(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  let span_x = plot_value_span(min_x, max_x)
+  let span_y = plot_value_span(min_y, max_y)
+  let units_per_pixel_x = span_x / plot_inner_width().to_double()
+  let units_per_pixel_y = span_y / plot_inner_height().to_double()
+  double_max(units_per_pixel_x, units_per_pixel_y)
+}
+
+///|
+fn plot_display_span_x(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  plot_units_per_pixel(min_x, max_x, min_y, max_y) * plot_inner_width().to_double()
+}
+
+///|
+fn plot_display_span_y(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  plot_units_per_pixel(min_x, max_x, min_y, max_y) * plot_inner_height().to_double()
+}
+
+///|
+fn plot_view_min_x(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  min_x - (plot_display_span_x(min_x, max_x, min_y, max_y) - plot_value_span(min_x, max_x)) / 2.0
+}
+
+///|
+fn plot_view_min_y(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Double {
+  min_y - (plot_display_span_y(min_x, max_x, min_y, max_y) - plot_value_span(min_y, max_y)) / 2.0
+}
+
+///|
 fn plot_scale_x(
   value : Double,
   min_x : Double,
   max_x : Double,
+  min_y : Double,
+  max_y : Double,
 ) -> Int {
-  let width = plot_width() - 2 * plot_padding()
-  let ratio = (value - min_x) / plot_value_span(min_x, max_x)
-  plot_padding() + (ratio * width.to_double()).to_int()
+  let ratio = (value - plot_view_min_x(min_x, max_x, min_y, max_y)) /
+    plot_display_span_x(min_x, max_x, min_y, max_y)
+  plot_padding() + (ratio * plot_inner_width().to_double()).to_int()
 }
 
 ///|
 fn plot_scale_y(
   value : Double,
+  min_x : Double,
+  max_x : Double,
   min_y : Double,
   max_y : Double,
 ) -> Int {
-  let height = plot_height() - 2 * plot_padding()
-  plot_height() - plot_padding() - (((value - min_y) / plot_value_span(min_y, max_y)) * height.to_double()).to_int()
+  let ratio = (value - plot_view_min_y(min_x, max_x, min_y, max_y)) /
+    plot_display_span_y(min_x, max_x, min_y, max_y)
+  plot_height() - plot_padding() - (ratio * plot_inner_height().to_double()).to_int()
 }
 
 ///|
@@ -181,7 +250,7 @@ fn plot_axes(
     ),
   ]
   if min_y <= 0.0 && 0.0 <= max_y {
-    let axis_y = plot_scale_y(0.0, min_y, max_y)
+    let axis_y = plot_scale_y(0.0, min_x, max_x, min_y, max_y)
     axes.push(
       line(
         class="plot-axis",
@@ -195,7 +264,7 @@ fn plot_axes(
     )
   }
   if min_x <= 0.0 && 0.0 <= max_x {
-    let axis_x = plot_scale_x(0.0, min_x, max_x)
+    let axis_x = plot_scale_x(0.0, min_x, max_x, min_y, max_y)
     axes.push(
       line(
         class="plot-axis",
@@ -221,8 +290,8 @@ fn line_plot_view(
     Some((min_x, max_x, min_y, max_y)) => {
       let mapped = points.map(fn(point) {
         (
-          plot_scale_x(point.x, min_x, max_x),
-          plot_scale_y(point.y, min_y, max_y),
+          plot_scale_x(point.x, min_x, max_x, min_y, max_y),
+          plot_scale_y(point.y, min_x, max_x, min_y, max_y),
         )
       })
       let children = plot_axes(min_x, max_x, min_y, max_y) + [
@@ -255,8 +324,8 @@ fn scatter_plot_view(points : Array[PlotPoint]) -> @html.Html {
         points.map(fn(point) {
           circle(
             class="plot-point",
-            cx=plot_scale_x(point.x, min_x, max_x),
-            cy=plot_scale_y(point.y, min_y, max_y),
+            cx=plot_scale_x(point.x, min_x, max_x, min_y, max_y),
+            cy=plot_scale_y(point.y, min_x, max_x, min_y, max_y),
             r=2,
             fill="currentColor",
           )
@@ -279,10 +348,34 @@ fn rect_plot_view(rects : Array[PlotRect]) -> @html.Html {
     Some((min_x, max_x, min_y, max_y)) => {
       let children = plot_axes(min_x, max_x, min_y, max_y) +
         rects.map(fn(item) {
-          let left = plot_scale_x(double_min(item.x_start, item.x_end), min_x, max_x)
-          let right = plot_scale_x(double_max(item.x_start, item.x_end), min_x, max_x)
-          let top = plot_scale_y(double_max(item.y_start, item.y_end), min_y, max_y)
-          let bottom = plot_scale_y(double_min(item.y_start, item.y_end), min_y, max_y)
+          let left = plot_scale_x(
+            double_min(item.x_start, item.x_end),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+          )
+          let right = plot_scale_x(
+            double_max(item.x_start, item.x_end),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+          )
+          let top = plot_scale_y(
+            double_max(item.y_start, item.y_end),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+          )
+          let bottom = plot_scale_y(
+            double_min(item.y_start, item.y_end),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+          )
           rect(
             class="plot-region",
             x=left,
