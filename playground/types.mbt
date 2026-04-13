@@ -14,6 +14,7 @@ priv enum DocPackage {
   SymNTheory
   SymPhysics
   SymSolvers
+  SymPlotting
 } derive(Eq)
 
 ///|
@@ -112,6 +113,10 @@ priv enum DocFunction {
   LinSolve
   NonLinSolve
   Decompogen
+  TextPlot
+  Plot
+  PlotParametric
+  PlotImplicit
 } derive(Eq)
 
 ///|
@@ -144,10 +149,32 @@ priv struct ParserSettings {
 }
 
 ///|
+priv struct PlotPoint {
+  x : Double
+  y : Double
+}
+
+///|
+priv struct PlotRect {
+  x_start : Double
+  x_end : Double
+  y_start : Double
+  y_end : Double
+}
+
+///|
+priv enum PlotPayload {
+  Line(Array[PlotPoint])
+  Scatter(Array[PlotPoint])
+  Rects(Array[PlotRect])
+}
+
+///|
 priv struct ResultField {
   label : String
   value : String
   latex : String?
+  plot : PlotPayload?
 }
 
 ///|

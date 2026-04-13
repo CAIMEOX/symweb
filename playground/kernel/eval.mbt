@@ -354,7 +354,7 @@ fn require_int_args(
 
 ///|
 fn plain_field(label : String, value : String) -> @common.ResultField {
-  { label, value, latex: None }
+  { label, value, latex: None, plot: None }
 }
 
 ///|
@@ -363,7 +363,16 @@ fn latex_field(
   value : String,
   latex : String,
 ) -> @common.ResultField {
-  { label, value, latex: Some(latex) }
+  { label, value, latex: Some(latex), plot: None }
+}
+
+///|
+fn plot_field(
+  label : String,
+  value : String,
+  plot : @common.PlotPayload,
+) -> @common.ResultField {
+  { label, value, latex: None, plot: Some(plot) }
 }
 
 ///|
@@ -628,6 +637,11 @@ fn x_symbol() -> @symbit.Expr {
 }
 
 ///|
+fn y_symbol() -> @symbit.Expr {
+  @symbit.sympify_name("y")
+}
+
+///|
 fn t_symbol() -> @symbit.Expr {
   @symbit.sympify_name("t")
 }
@@ -645,6 +659,241 @@ fn k_symbol() -> @symbit.Expr {
 ///|
 fn lambda_symbol() -> @symbit.Expr {
   @symbit.sympify_name("lambda")
+}
+
+///|
+fn plot_points_from_xy(
+  xs : Array[Double],
+  ys : Array[Double?],
+) -> Array[@common.PlotPoint] {
+  let points : Array[@common.PlotPoint] = []
+  let limit = if xs.length() < ys.length() { xs.length() } else { ys.length() }
+  for index = 0; index < limit; index = index + 1 {
+    match ys[index] {
+      Some(y) => points.push(@common.plot_point(xs[index], y))
+      None => ()
+    }
+  }
+  points
+}
+
+///|
+fn plot_points_from_parametric(
+  xs : Array[Double?],
+  ys : Array[Double?],
+) -> Array[@common.PlotPoint] {
+  let points : Array[@common.PlotPoint] = []
+  let limit = if xs.length() < ys.length() { xs.length() } else { ys.length() }
+  for index = 0; index < limit; index = index + 1 {
+    match (xs[index], ys[index]) {
+      (Some(x), Some(y)) => points.push(@common.plot_point(x, y))
+      _ => ()
+    }
+  }
+  points
+}
+
+///|
+fn implicit_rectangles(
+  rects : Array[@symplotting.ImplicitRectangle],
+) -> Array[@common.PlotRect] {
+  rects.map(fn(rect) {
+    @common.plot_rect(rect.x_start, rect.x_end, rect.y_start, rect.y_end)
+  })
+}
+
+///|
+fn implicit_mesh_points(
+  xs : Array[Array[Double]],
+  ys : Array[Array[Double]],
+  zs : Array[Array[Double?]],
+  kind : String,
+) -> Array[@common.PlotPoint] {
+  let points : Array[@common.PlotPoint] = []
+  let row_limit = if xs.length() < ys.length() { xs.length() } else { ys.length() }
+  for row = 0; row < row_limit; row = row + 1 {
+    let x_row = xs[row]
+    let y_row = ys[row]
+    let z_row = if row < zs.length() { zs[row] } else { [] }
+    let col_limit = if x_row.length() < y_row.length() {
+      x_row.length()
+    } else {
+      y_row.length()
+    }
+    for col = 0; col < col_limit; col = col + 1 {
+      if col >= z_row.length() {
+        continue
+      }
+      match z_row[col] {
+        Some(z) => {
+          let keep_point = if kind == "contour" {
+            let abs_z = if z < 0.0 { -z } else { z }
+            abs_z <= 0.08
+          } else {
+            z > 0.5
+          }
+          if keep_point {
+            points.push(@common.plot_point(x_row[col], y_row[col]))
+          }
+        }
+        None => ()
+      }
+    }
+  }
+  points
+}
+
+///|
+fn plotting_error_text(error : @symplotting.PlottingError) -> String {
+  match error {
+    @symplotting.PlottingError::ValueError(message) => message
+    @symplotting.PlottingError::TypeError(message) => message
+  }
+}
+
+///|
+fn render_textplot_field(
+  expr : @symbit.Expr,
+  start : @symbit.Expr,
+  end_ : @symbit.Expr,
+) -> Result[@common.ResultField, String] {
+  let lines_result : Result[Array[String], @symplotting.PlottingError] = try? @symplotting.textplot_str(
+    expr,
+    start,
+    end_,
+  )
+  match lines_result {
+    Err(error) => Err(plotting_error_text(error))
+    Ok(lines) => Ok(plain_field("Result", lines.join("\n")))
+  }
+}
+
+///|
+fn render_plot_field(
+  expr : @symbit.Expr,
+  start? : @symbit.Expr? = None,
+  end_? : @symbit.Expr? = None,
+) -> Result[@common.ResultField, String] {
+  let inputs = [@symplotting.plot_expr(expr)]
+  match (start, end_) {
+    (Some(left), Some(right)) =>
+      inputs.push(@symplotting.plot_range(x_symbol(), left, right))
+    _ => ()
+  }
+  let plot_result : Result[@symplotting.Plot, @symplotting.PlottingError] = try? @symplotting.plot(
+    inputs,
+    backend="matplotlib",
+    show=false,
+  )
+  match plot_result {
+    Err(error) => Err(plotting_error_text(error))
+    Ok(plot_obj) => {
+      let points_result : Result[(Array[Double], Array[Double?]), @symplotting.PlottingError] = try? plot_obj.get_points(
+        0,
+      )
+      match points_result {
+        Err(error) => Err(plotting_error_text(error))
+        Ok((xs, ys)) => Ok(
+          plot_field(
+            "Result",
+            plot_obj.to_string(),
+            @common.PlotPayload::Line(plot_points_from_xy(xs, ys)),
+          ),
+        )
+      }
+    }
+  }
+}
+
+///|
+fn render_plot_parametric_field(
+  expr_x : @symbit.Expr,
+  expr_y : @symbit.Expr,
+  variable? : @symbit.Expr? = None,
+  start? : @symbit.Expr? = None,
+  end_? : @symbit.Expr? = None,
+) -> Result[@common.ResultField, String] {
+  let inputs = [@symplotting.plot_parametric_expr(expr_x, expr_y)]
+  match (variable, start, end_) {
+    (Some(symbol), Some(left), Some(right)) =>
+      inputs.push(@symplotting.plot_parametric_range(symbol, left, right))
+    (None, Some(left), Some(right)) =>
+      inputs.push(@symplotting.plot_parametric_range(x_symbol(), left, right))
+    _ => ()
+  }
+  let plot_result : Result[@symplotting.Plot, @symplotting.PlottingError] = try? @symplotting.plot_parametric(
+    inputs,
+    backend="matplotlib",
+    show=false,
+  )
+  match plot_result {
+    Err(error) => Err(plotting_error_text(error))
+    Ok(plot_obj) => {
+      let points_result : Result[
+        (Array[Double?], Array[Double?]),
+        @symplotting.PlottingError,
+      ] = try? plot_obj.get_parametric_points(0)
+      match points_result {
+        Err(error) => Err(plotting_error_text(error))
+        Ok((xs, ys)) => Ok(
+          plot_field(
+            "Result",
+            plot_obj.to_string(),
+            @common.PlotPayload::Line(plot_points_from_parametric(xs, ys)),
+          ),
+        )
+      }
+    }
+  }
+}
+
+///|
+fn render_plot_implicit_field(
+  expr : @symbit.Expr,
+  x_range? : @symbit.Expr? = None,
+  y_range? : @symbit.Expr? = None,
+) -> Result[@common.ResultField, String] {
+  let plot_result : Result[@symplotting.Plot, @symplotting.PlottingError] = try? @symplotting.plot_implicit(
+    expr,
+    x_var=x_range,
+    y_var=y_range,
+    adaptive=true,
+    xscale="linear",
+    yscale="linear",
+    show=false,
+    backend="matplotlib",
+  )
+  match plot_result {
+    Err(error) => Err(plotting_error_text(error))
+    Ok(plot_obj) => {
+      let data_result : Result[
+        @symplotting.ImplicitPlotData,
+        @symplotting.PlottingError,
+      ] = try? plot_obj.get_implicit_data(0)
+      match data_result {
+        Err(error) => Err(plotting_error_text(error))
+        Ok(data) =>
+          match data {
+            @symplotting.ImplicitPlotData::Fill(rects) => Ok(
+              plot_field(
+                "Result",
+                plot_obj.to_string(),
+                @common.PlotPayload::Rects(implicit_rectangles(rects)),
+              ),
+            )
+            @symplotting.ImplicitPlotData::Mesh(xs, ys, zs, kind) => Ok(
+              plot_field(
+                "Result",
+                plot_obj.to_string(),
+                @common.PlotPayload::Scatter(
+                  implicit_mesh_points(xs, ys, zs, kind),
+                ),
+              ),
+            )
+          }
+      }
+    }
+  }
 }
 
 ///|
@@ -2356,6 +2605,97 @@ pub fn evaluate_request(
               ])
           }
         }
+        "textplot" =>
+          match args {
+            [target] =>
+              match render_textplot_field(target, @symcore.int(-5), @symcore.int(5)) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            [target, start, end_] =>
+              match render_textplot_field(target, start, end_) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            _ =>
+              @common.KernelEvalState::Failure(
+                "Expected textplot(expr) or textplot(expr, start, end).",
+              )
+          }
+        "plot" =>
+          match args {
+            [target] =>
+              match render_plot_field(target) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            [target, start, end_] =>
+              match render_plot_field(target, start=Some(start), end_=Some(end_)) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            _ =>
+              @common.KernelEvalState::Failure(
+                "Expected plot(expr) or plot(expr, start, end).",
+              )
+          }
+        "plot_parametric" =>
+          match args {
+            [expr_x, expr_y] =>
+              match render_plot_parametric_field(expr_x, expr_y) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            [expr_x, expr_y, start, end_] =>
+              match
+                render_plot_parametric_field(
+                  expr_x,
+                  expr_y,
+                  start=Some(start),
+                  end_=Some(end_),
+                ) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            [expr_x, expr_y, symbol, start, end_] =>
+              match
+                render_plot_parametric_field(
+                  expr_x,
+                  expr_y,
+                  variable=Some(symbol),
+                  start=Some(start),
+                  end_=Some(end_),
+                ) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            _ =>
+              @common.KernelEvalState::Failure(
+                "Expected plot_parametric(expr_x, expr_y), plot_parametric(expr_x, expr_y, start, end), or plot_parametric(expr_x, expr_y, symbol, start, end).",
+              )
+          }
+        "plot_implicit" =>
+          match args {
+            [target] =>
+              match render_plot_implicit_field(target) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            [target, x_start, x_end, y_start, y_end] =>
+              match
+                render_plot_implicit_field(
+                  target,
+                  x_range=Some(@symcore.Expr::Tuple([x_symbol(), x_start, x_end])),
+                  y_range=Some(@symcore.Expr::Tuple([y_symbol(), y_start, y_end])),
+                ) {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(field) => finish([field])
+              }
+            _ =>
+              @common.KernelEvalState::Failure(
+                "Expected plot_implicit(expr) or plot_implicit(expr, x0, x1, y0, y1).",
+              )
+          }
         _ => unknown_function(request.function_id)
       }
     }

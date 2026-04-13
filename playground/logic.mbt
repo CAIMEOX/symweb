@@ -232,6 +232,10 @@ fn function_runtime_id(function_id : DocFunction) -> String {
     LinSolve => "linsolve"
     NonLinSolve => "nonlinsolve"
     Decompogen => "decompogen"
+    TextPlot => "textplot"
+    Plot => "plot"
+    PlotParametric => "plot_parametric"
+    PlotImplicit => "plot_implicit"
   }
 }
 
@@ -332,12 +336,16 @@ fn function_headline(function_id : DocFunction) -> String {
     LinSolve => "Linear System Solving"
     NonLinSolve => "Nonlinear System Solving"
     Decompogen => "Functional Decomposition"
+    TextPlot => "ASCII Text Plot"
+    Plot => "Sampled Line Plot"
+    PlotParametric => "Parametric Plot"
+    PlotImplicit => "Implicit Plot"
   }
 }
 
 ///|
 fn result_field(label : String, value : String) -> ResultField {
-  { label, value, latex: None }
+  { label, value, latex: None, plot: None }
 }
 
 ///|
@@ -346,7 +354,7 @@ fn result_field_latex(
   value : String,
   latex : String?,
 ) -> ResultField {
-  { label, value, latex }
+  { label, value, latex, plot: None }
 }
 
 ///|
@@ -452,7 +460,32 @@ fn decode_kernel_response(response_json : String) -> @common.KernelEvalState {
 
 ///|
 fn kernel_field_to_result_field(field : @common.ResultField) -> ResultField {
-  { label: field.label, value: field.value, latex: field.latex }
+  let plot = match field.plot {
+    Some(payload) =>
+      Some(
+        match payload {
+          @common.PlotPayload::Line(points) =>
+            PlotPayload::Line(points.map(fn(point) {
+              { x: point.x, y: point.y }
+            }))
+          @common.PlotPayload::Scatter(points) =>
+            PlotPayload::Scatter(points.map(fn(point) {
+              { x: point.x, y: point.y }
+            }))
+          @common.PlotPayload::Rects(rects) =>
+            PlotPayload::Rects(rects.map(fn(rect) {
+              {
+                x_start: rect.x_start,
+                x_end: rect.x_end,
+                y_start: rect.y_start,
+                y_end: rect.y_end,
+              }
+            }))
+        },
+      )
+    None => None
+  }
+  { label: field.label, value: field.value, latex: field.latex, plot }
 }
 
 ///|

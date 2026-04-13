@@ -3,4 +3,5 @@ import {
   "moonbitlang/core/json",
   "moonbit-community/rabbita",
   "moonbit-community/rabbita/html",
+  "moonbit-community/rabbita/svg",
 }

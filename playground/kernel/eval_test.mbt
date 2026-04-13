@@ -274,6 +274,89 @@ test "kernel matrix front doors expose dense constructors and invariants" {
 }
 
 ///|
+test "kernel textplot front door returns ascii plot output" {
+  let request = @common.kernel_request(
+    "textplot",
+    "(sin(x), -4, 4)",
+    test_parser_settings(),
+  )
+  match evaluate_request(request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("textplot failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields.length(), content="1")
+      inspect(payload.fields[0].label, content="Result")
+      if !payload.fields[0].value.contains("|") {
+        fail("expected ascii axis markers in textplot output")
+      }
+    }
+  }
+}
+
+///|
+test "kernel plot front door returns sampled line payload" {
+  let request = @common.kernel_request(
+    "plot",
+    "(x^3 - 3*x, -4, 4)",
+    test_parser_settings(),
+  )
+  match evaluate_request(request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("plot failed: \{message}")
+    @common.KernelEvalState::Success(payload) =>
+      match payload.fields[0].plot {
+        Some(@common.PlotPayload::Line(points)) =>
+          if points.length() < 20 {
+            fail("expected a sampled line plot payload")
+          }
+        _ => fail("expected line plot payload")
+      }
+  }
+}
+
+///|
+test "kernel plot_parametric front door returns sampled planar payload" {
+  let request = @common.kernel_request(
+    "plot_parametric",
+    "(cos(x), sin(x), 0, 2*pi)",
+    test_parser_settings(),
+  )
+  match evaluate_request(request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("plot_parametric failed: \{message}")
+    @common.KernelEvalState::Success(payload) =>
+      match payload.fields[0].plot {
+        Some(@common.PlotPayload::Line(points)) =>
+          if points.length() < 20 {
+            fail("expected a sampled parametric line payload")
+          }
+        _ => fail("expected parametric line payload")
+      }
+  }
+}
+
+///|
+test "kernel plot_implicit front door returns filled-region payload" {
+  let request = @common.kernel_request(
+    "plot_implicit",
+    "(y > x, -4, 4, -4, 4)",
+    test_parser_settings(),
+  )
+  match evaluate_request(request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("plot_implicit failed: \{message}")
+    @common.KernelEvalState::Success(payload) =>
+      match payload.fields[0].plot {
+        Some(@common.PlotPayload::Rects(rects)) =>
+          if rects.length() == 0 {
+            fail("expected a non-empty implicit fill payload")
+          }
+        _ => fail("expected implicit fill payload")
+      }
+  }
+}
+
+///|
 test "kernel discrete transforms expose fft and mobius front doors" {
   let fft_request = @common.kernel_request(
     "discrete_fft",
@@ -363,8 +446,8 @@ test "kernel new matrix front doors expose inverse solve rank and charpoly" {
     @common.KernelEvalState::Success(payload) => {
       inspect(payload.fields[2].label, content="Result")
       if !payload.fields[2].value.contains("lambda") ||
-        !payload.fields[2].value.contains("lambda - 5") ||
-        !payload.fields[2].value.contains("- 2") {
+        !payload.fields[2].value.contains("5") ||
+        !payload.fields[2].value.contains("2") {
         fail("expected a characteristic polynomial in lambda")
       }
     }

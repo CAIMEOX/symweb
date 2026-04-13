@@ -14,6 +14,7 @@ import {
   "CAIMEOX/symbit/sympolys",
   "CAIMEOX/symbit/symparse",
   "CAIMEOX/symbit/symprint",
+  "CAIMEOX/symbit/symplotting",
   "CAIMEOX/symbit/symnum",
   "CAIMEOX/symbit/symntheory",
   "CAIMEOX/symbit/symseries",

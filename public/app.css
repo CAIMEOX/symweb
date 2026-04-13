@@ -519,6 +519,53 @@ body {
   overflow-x: auto;
 }
 
+.plot-result-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.plot-svg {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    var(--editor-bg);
+  color: var(--ink);
+}
+
+.plot-frame {
+  opacity: 0.55;
+}
+
+.plot-axis {
+  opacity: 0.28;
+}
+
+.plot-line {
+  color: var(--ink);
+}
+
+.plot-point {
+  color: var(--ink);
+}
+
+.plot-region {
+  color: var(--ink);
+}
+
+.plot-caption {
+  margin-top: 0;
+}
+
+.plot-empty {
+  padding: 18px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--mono);
+  line-height: 1.6;
+}
+
 .latex-source,
 .latex-render {
   display: none;

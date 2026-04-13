@@ -2,7 +2,7 @@
   "name": "CAIMEOX/symweb",
   "version": "0.1.0",
   "deps": {
-    "CAIMEOX/symbit": "0.5.7",
+    "CAIMEOX/symbit": "0.5.8",
     "moonbit-community/rabbita": "0.11.5"
   },
   "readme": "README.mbt.md",

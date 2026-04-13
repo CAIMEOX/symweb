@@ -12,6 +12,13 @@ using @html {
   span,
   textarea,
 }
+using @svg {
+  circle,
+  line,
+  polyline,
+  rect,
+  svg,
+}
 
 ///|
 fn nav_button_class(active : Bool) -> String {
@@ -59,19 +66,276 @@ fn tree_button_class(active : Bool) -> String {
 }
 
 ///|
+fn plot_width() -> Int {
+  560
+}
+
+///|
+fn plot_height() -> Int {
+  320
+}
+
+///|
+fn plot_padding() -> Int {
+  18
+}
+
+///|
+fn double_min(a : Double, b : Double) -> Double {
+  if a <= b { a } else { b }
+}
+
+///|
+fn double_max(a : Double, b : Double) -> Double {
+  if a >= b { a } else { b }
+}
+
+///|
+fn plot_value_span(min_value : Double, max_value : Double) -> Double {
+  let span = max_value - min_value
+  if span == 0.0 { 1.0 } else { span }
+}
+
+///|
+fn plot_scale_x(
+  value : Double,
+  min_x : Double,
+  max_x : Double,
+) -> Int {
+  let width = plot_width() - 2 * plot_padding()
+  let ratio = (value - min_x) / plot_value_span(min_x, max_x)
+  plot_padding() + (ratio * width.to_double()).to_int()
+}
+
+///|
+fn plot_scale_y(
+  value : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Int {
+  let height = plot_height() - 2 * plot_padding()
+  plot_height() - plot_padding() - (((value - min_y) / plot_value_span(min_y, max_y)) * height.to_double()).to_int()
+}
+
+///|
+fn line_bounds(
+  points : Array[PlotPoint],
+) -> (Double, Double, Double, Double)? {
+  match points {
+    [] => None
+    [first, ..] => {
+      let mut min_x = first.x
+      let mut max_x = first.x
+      let mut min_y = first.y
+      let mut max_y = first.y
+      for point in points {
+        min_x = double_min(min_x, point.x)
+        max_x = double_max(max_x, point.x)
+        min_y = double_min(min_y, point.y)
+        max_y = double_max(max_y, point.y)
+      }
+      Some((min_x, max_x, min_y, max_y))
+    }
+  }
+}
+
+///|
+fn rect_bounds(
+  rects : Array[PlotRect],
+) -> (Double, Double, Double, Double)? {
+  match rects {
+    [] => None
+    [first, ..] => {
+      let mut min_x = double_min(first.x_start, first.x_end)
+      let mut max_x = double_max(first.x_start, first.x_end)
+      let mut min_y = double_min(first.y_start, first.y_end)
+      let mut max_y = double_max(first.y_start, first.y_end)
+      for rect_item in rects {
+        min_x = double_min(min_x, double_min(rect_item.x_start, rect_item.x_end))
+        max_x = double_max(max_x, double_max(rect_item.x_start, rect_item.x_end))
+        min_y = double_min(min_y, double_min(rect_item.y_start, rect_item.y_end))
+        max_y = double_max(max_y, double_max(rect_item.y_start, rect_item.y_end))
+      }
+      Some((min_x, max_x, min_y, max_y))
+    }
+  }
+}
+
+///|
+fn plot_axes(
+  min_x : Double,
+  max_x : Double,
+  min_y : Double,
+  max_y : Double,
+) -> Array[@svg.Svg] {
+  let axes : Array[@svg.Svg] = [
+    rect(
+      class="plot-frame",
+      x=0,
+      y=0,
+      width=plot_width(),
+      height=plot_height(),
+      fill="none",
+      stroke="currentColor",
+      stroke_width=1,
+    ),
+  ]
+  if min_y <= 0.0 && 0.0 <= max_y {
+    let axis_y = plot_scale_y(0.0, min_y, max_y)
+    axes.push(
+      line(
+        class="plot-axis",
+        x1=plot_padding(),
+        y1=axis_y,
+        x2=plot_width() - plot_padding(),
+        y2=axis_y,
+        stroke="currentColor",
+        stroke_width=1,
+      ),
+    )
+  }
+  if min_x <= 0.0 && 0.0 <= max_x {
+    let axis_x = plot_scale_x(0.0, min_x, max_x)
+    axes.push(
+      line(
+        class="plot-axis",
+        x1=axis_x,
+        y1=plot_padding(),
+        x2=axis_x,
+        y2=plot_height() - plot_padding(),
+        stroke="currentColor",
+        stroke_width=1,
+      ),
+    )
+  }
+  axes
+}
+
+///|
+fn line_plot_view(
+  points : Array[PlotPoint],
+  class_name : String,
+) -> @html.Html {
+  match line_bounds(points) {
+    None => div(class="plot-empty", "No sampled points.")
+    Some((min_x, max_x, min_y, max_y)) => {
+      let mapped = points.map(fn(point) {
+        (
+          plot_scale_x(point.x, min_x, max_x),
+          plot_scale_y(point.y, min_y, max_y),
+        )
+      })
+      let children = plot_axes(min_x, max_x, min_y, max_y) + [
+        polyline(
+          class=class_name,
+          points=mapped,
+          fill="none",
+          stroke="currentColor",
+          stroke_width=2,
+          stroke_linecap="round",
+        ),
+      ]
+      svg(
+        class="plot-svg",
+        width=plot_width(),
+        height=plot_height(),
+        view_box="0 0 \{plot_width()} \{plot_height()}",
+        children,
+      )
+    }
+  }
+}
+
+///|
+fn scatter_plot_view(points : Array[PlotPoint]) -> @html.Html {
+  match line_bounds(points) {
+    None => div(class="plot-empty", "No contour samples.")
+    Some((min_x, max_x, min_y, max_y)) => {
+      let children = plot_axes(min_x, max_x, min_y, max_y) +
+        points.map(fn(point) {
+          circle(
+            class="plot-point",
+            cx=plot_scale_x(point.x, min_x, max_x),
+            cy=plot_scale_y(point.y, min_y, max_y),
+            r=2,
+            fill="currentColor",
+          )
+        })
+      svg(
+        class="plot-svg",
+        width=plot_width(),
+        height=plot_height(),
+        view_box="0 0 \{plot_width()} \{plot_height()}",
+        children,
+      )
+    }
+  }
+}
+
+///|
+fn rect_plot_view(rects : Array[PlotRect]) -> @html.Html {
+  match rect_bounds(rects) {
+    None => div(class="plot-empty", "No filled regions.")
+    Some((min_x, max_x, min_y, max_y)) => {
+      let children = plot_axes(min_x, max_x, min_y, max_y) +
+        rects.map(fn(item) {
+          let left = plot_scale_x(double_min(item.x_start, item.x_end), min_x, max_x)
+          let right = plot_scale_x(double_max(item.x_start, item.x_end), min_x, max_x)
+          let top = plot_scale_y(double_max(item.y_start, item.y_end), min_y, max_y)
+          let bottom = plot_scale_y(double_min(item.y_start, item.y_end), min_y, max_y)
+          rect(
+            class="plot-region",
+            x=left,
+            y=top,
+            width=right - left,
+            height=bottom - top,
+            fill="currentColor",
+            opacity="0.22",
+          )
+        })
+      svg(
+        class="plot-svg",
+        width=plot_width(),
+        height=plot_height(),
+        view_box="0 0 \{plot_width()} \{plot_height()}",
+        children,
+      )
+    }
+  }
+}
+
+///|
+fn plot_view(plot : PlotPayload) -> @html.Html {
+  match plot {
+    PlotPayload::Line(points) => line_plot_view(points, "plot-line")
+    PlotPayload::Scatter(points) => scatter_plot_view(points)
+    PlotPayload::Rects(rects) => rect_plot_view(rects)
+  }
+}
+
+///|
 fn result_card(
   label_text : String,
   value : String,
   latex : String?,
+  plot : PlotPayload?,
 ) -> @html.Html {
-  let rendered_value = match latex {
-    Some(source) =>
-      div(class="result-value-latex-shell", [
-        pre(class="result-value latex-fallback", value),
-        pre(class="latex-source", source),
-        div(class="latex-render", nothing),
+  let rendered_value = match plot {
+    Some(payload) =>
+      div(class="plot-result-shell", [
+        plot_view(payload),
+        pre(class="result-value plot-caption", value),
       ])
-    None => pre(class="result-value", value)
+    None =>
+      match latex {
+        Some(source) =>
+          div(class="result-value-latex-shell", [
+            pre(class="result-value latex-fallback", value),
+            pre(class="latex-source", source),
+            div(class="latex-render", nothing),
+          ])
+        None => pre(class="result-value", value)
+      }
   }
   div(class="result-card", [p(class="result-label", label_text), rendered_value])
 }
@@ -233,7 +497,7 @@ fn result_panel(model : DocModel) -> @html.Html {
         div(
           class=result_grid_class(visible_fields.length()),
           visible_fields.map(field => {
-            result_card(field.label, field.value, field.latex)
+            result_card(field.label, field.value, field.latex, field.plot)
           }),
         ),
       ])

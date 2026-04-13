@@ -31,10 +31,47 @@ pub fn parser_settings(
 }
 
 ///|
+pub(all) struct PlotPoint {
+  x : Double
+  y : Double
+} derive(Eq, ToJson, FromJson)
+
+///|
+pub fn plot_point(x : Double, y : Double) -> PlotPoint {
+  { x, y }
+}
+
+///|
+pub(all) struct PlotRect {
+  x_start : Double
+  x_end : Double
+  y_start : Double
+  y_end : Double
+} derive(Eq, ToJson, FromJson)
+
+///|
+pub fn plot_rect(
+  x_start : Double,
+  x_end : Double,
+  y_start : Double,
+  y_end : Double,
+) -> PlotRect {
+  { x_start, x_end, y_start, y_end }
+}
+
+///|
+pub(all) enum PlotPayload {
+  Line(Array[PlotPoint])
+  Scatter(Array[PlotPoint])
+  Rects(Array[PlotRect])
+} derive(Eq, ToJson, FromJson)
+
+///|
 pub(all) struct ResultField {
   label : String
   value : String
   latex : String?
+  plot : PlotPayload?
 } derive(Eq, ToJson, FromJson)
 
 ///|
@@ -42,8 +79,9 @@ pub fn result_field(
   label : String,
   value : String,
   latex? : String? = None,
+  plot? : PlotPayload? = None,
 ) -> ResultField {
-  { label, value, latex }
+  { label, value, latex, plot }
 }
 
 ///|

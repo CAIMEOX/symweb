@@ -16,7 +16,11 @@ pub fn kernel_success_payload(String, String?, String, Array[ResultField]) -> Ke
 
 pub fn parser_settings(Bool, Bool, Bool, Bool, Bool, Bool, Bool) -> ParserSettings
 
-pub fn result_field(String, String, latex? : String?) -> ResultField
+pub fn plot_point(Double, Double) -> PlotPoint
+
+pub fn plot_rect(Double, Double, Double, Double) -> PlotRect
+
+pub fn result_field(String, String, latex? : String?, plot? : PlotPayload?) -> ResultField
 
 // Errors
 
@@ -49,10 +53,29 @@ pub(all) struct ParserSettings {
   convert_equals_signs : Bool
 } derive(Eq, ToJson, @json.FromJson)
 
+pub(all) enum PlotPayload {
+  Line(Array[PlotPoint])
+  Scatter(Array[PlotPoint])
+  Rects(Array[PlotRect])
+} derive(Eq, ToJson, @json.FromJson)
+
+pub(all) struct PlotPoint {
+  x : Double
+  y : Double
+} derive(Eq, ToJson, @json.FromJson)
+
+pub(all) struct PlotRect {
+  x_start : Double
+  x_end : Double
+  y_start : Double
+  y_end : Double
+} derive(Eq, ToJson, @json.FromJson)
+
 pub(all) struct ResultField {
   label : String
   value : String
   latex : String?
+  plot : PlotPayload?
 } derive(Eq, ToJson, @json.FromJson)
 
 // Type aliases

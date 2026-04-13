@@ -221,6 +221,19 @@ fn package_doc(id : DocPackage) -> PackageDoc {
           DocFunction::Decompogen,
         ],
       }
+    DocPackage::SymPlotting =>
+      {
+        id,
+        label: "symplotting",
+        overview: "Plotting is exposed through sampled symbolic front doors. The browser renders line plots and implicit regions directly from sampled data instead of delegating to Matplotlib.",
+        architecture: "The runner keeps the surface deliberately narrow: text plots, 1D plots, parametric planar curves, and implicit 2D plots. Inputs default to x for single-variable ranges and x/y for implicit coordinates unless an example says otherwise.",
+        functions: [
+          DocFunction::TextPlot,
+          DocFunction::Plot,
+          DocFunction::PlotParametric,
+          DocFunction::PlotImplicit,
+        ],
+      }
   }
 }
 
@@ -231,6 +244,7 @@ fn package_catalog() -> Array[PackageDoc] {
     package_doc(DocPackage::SymCalculus),
     package_doc(DocPackage::SymIntegrals),
     package_doc(DocPackage::SymSeries),
+    package_doc(DocPackage::SymPlotting),
     package_doc(DocPackage::SymAssume),
     package_doc(DocPackage::SymLogic),
     package_doc(DocPackage::SymSets),
@@ -2315,6 +2329,106 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
           },
         ],
       }
+    DocFunction::TextPlot =>
+      {
+        id,
+        package_id: DocPackage::SymPlotting,
+        label: "textplot",
+        module_path: "CAIMEOX/symbit/symplotting",
+        signature: "textplot(expr: Expr, start: Expr = -5, end: Expr = 5) -> Array[String]",
+        summary: "Render a one-dimensional symbolic plot as an ASCII chart.",
+        narrative: "This is the narrowest plotting front door and the easiest one to inspect in a documentation pane. It samples a function over a single real range and prints a text grid instead of a bitmap image.",
+        interpretation: "Enter either expr or (expr, start, end). The browser shows the exact ASCII output produced by the plotting package.",
+        examples: [
+          {
+            id: "plotting_textplot_sin",
+            label: "Sine over a symmetric window",
+            description: "A compact ASCII plot with the default x variable.",
+            source: "(sin(x), -6, 6)",
+          },
+          {
+            id: "plotting_textplot_sinc",
+            label: "A removable singularity pattern",
+            description: "Shows that the ASCII backend can still expose a structured oscillatory shape.",
+            source: "(sin(x)/x, -10, 10)",
+          },
+        ],
+      }
+    DocFunction::Plot =>
+      {
+        id,
+        package_id: DocPackage::SymPlotting,
+        label: "plot",
+        module_path: "CAIMEOX/symbit/symplotting",
+        signature: "plot(expr: Expr, range: (Symbol, Expr, Expr)? = (x, -5, 5)) -> Plot",
+        summary: "Sample a one-dimensional function over a real range and render it as an SVG polyline.",
+        narrative: "This keeps the familiar SymPy plot front door but renders the sampled data directly in the browser rather than delegating to Matplotlib.",
+        interpretation: "Enter either expr or (expr, start, end). The variable defaults to x, and the result card shows both the plot object summary and the rendered line.",
+        examples: [
+          {
+            id: "plotting_plot_basic",
+            label: "Polynomial with turning points",
+            description: "A compact single-curve line plot.",
+            source: "(x^3 - 3*x, -4, 4)",
+          },
+          {
+            id: "plotting_plot_log",
+            label: "Logarithmic shape on a positive interval",
+            description: "Shows the sampled frontend on a non-polynomial function.",
+            source: "(log(x), 1/10, 6)",
+          },
+        ],
+      }
+    DocFunction::PlotParametric =>
+      {
+        id,
+        package_id: DocPackage::SymPlotting,
+        label: "plot_parametric",
+        module_path: "CAIMEOX/symbit/symplotting",
+        signature: "plot_parametric(expr_x: Expr, expr_y: Expr, range: (Symbol, Expr, Expr)? = (x, -5, 5)) -> Plot",
+        summary: "Sample a planar parametric curve and render it as an SVG polyline.",
+        narrative: "Parametric plotting uses the same sampled plotting kernel as line plots, but the output is interpreted directly in the xy-plane instead of as y(x).",
+        interpretation: "Enter (expr_x, expr_y), (expr_x, expr_y, start, end), or (expr_x, expr_y, symbol, start, end). The result card draws the curve from the sampled coordinates.",
+        examples: [
+          {
+            id: "plotting_parametric_circle",
+            label: "Unit circle",
+            description: "A standard parametric curve over one full turn.",
+            source: "(cos(x), sin(x), 0, 2*pi)",
+          },
+          {
+            id: "plotting_parametric_lissajous",
+            label: "Lissajous-style curve",
+            description: "A denser parametric example with repeated oscillation.",
+            source: "(sin(2*x), cos(3*x), 0, 2*pi)",
+          },
+        ],
+      }
+    DocFunction::PlotImplicit =>
+      {
+        id,
+        package_id: DocPackage::SymPlotting,
+        label: "plot_implicit",
+        module_path: "CAIMEOX/symbit/symplotting",
+        signature: "plot_implicit(expr: Expr, x_range: (x, Expr, Expr)? = (x, -5, 5), y_range: (y, Expr, Expr)? = (y, -5, 5)) -> Plot",
+        summary: "Render an implicit equation or inequality in the xy-plane.",
+        narrative: "The implicit frontend uses the same SymPy-style plotting API but returns sampled contour points or filled rectangles that the browser renders directly.",
+        interpretation: "Enter expr for the default x/y window, or (expr, x0, x1, y0, y1) for a custom window. Equalities render as point clouds; inequalities render as filled regions.",
+        examples: [
+          {
+            id: "plotting_implicit_curve",
+            label: "Implicit curve",
+            description: "A standard circle defined by an equation.",
+            source: "(Eq(x^2 + y^2, 4), -3, 3, -3, 3)",
+          },
+          {
+            id: "plotting_implicit_region",
+            label: "Half-plane region",
+            description: "An inequality rendered as a filled domain.",
+            source: "(y > x, -4, 4, -4, 4)",
+          },
+        ],
+      }
   }
 }
 
@@ -2420,6 +2534,10 @@ fn function_topic(id : DocFunction) -> String {
     DocFunction::LinSolve => "solvers"
     DocFunction::NonLinSolve => "solvers"
     DocFunction::Decompogen => "solvers"
+    DocFunction::TextPlot => "plotting"
+    DocFunction::Plot => "plotting"
+    DocFunction::PlotParametric => "plotting"
+    DocFunction::PlotImplicit => "plotting"
   }
 }
 
@@ -2520,6 +2638,11 @@ fn function_input_format(id : DocFunction) -> String {
     DocFunction::LinSolve => "((eq1, ...), (x, ...))"
     DocFunction::NonLinSolve => "((eq1, ...), (x, ...))"
     DocFunction::Decompogen => "expr"
+    DocFunction::TextPlot => "expr or (expr, start, end)"
+    DocFunction::Plot => "expr or (expr, start, end)"
+    DocFunction::PlotParametric =>
+      "(expr_x, expr_y) or (expr_x, expr_y, start, end) or (expr_x, expr_y, t, start, end)"
+    DocFunction::PlotImplicit => "expr or (expr, x0, x1, y0, y1)"
   }
 }
 
