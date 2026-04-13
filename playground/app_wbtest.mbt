@@ -17,3 +17,9 @@ test "playground plot scaling centers the shorter axis when spans differ" {
   assert_true(top > plot_padding())
   assert_true(bottom < plot_height() - plot_padding())
 }
+
+///|
+test "playground topbar exposes github source button" {
+  assert_eq(github_button_label(), "GitHub")
+  assert_eq(github_repo_url(), "https://github.com/CAIMEOX/symbit")
+}

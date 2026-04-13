@@ -1,5 +1,6 @@
 ///|
 using @html {
+  a,
   button,
   div,
   h2,
@@ -63,6 +64,36 @@ fn tree_button_class(active : Bool) -> String {
   } else {
     "tree-function-button"
   }
+}
+
+///|
+fn github_repo_url() -> String {
+  "https://github.com/CAIMEOX/symbit"
+}
+
+///|
+fn github_button_label() -> String {
+  "GitHub"
+}
+
+///|
+fn topbar_view(dispatch : @rabbita.Dispatch[DocMsg]) -> @html.Html {
+  header(class="topbar", [
+    p(class="topbar-brand", "symbit"),
+    div(class="topbar-actions", [
+      a(
+        class="topbar-button",
+        href=github_repo_url(),
+        github_button_label(),
+      ),
+      button(
+        class="topbar-button",
+        type_="button",
+        on_click=dispatch(DocMsg::OpenSettings),
+        "Settings",
+      ),
+    ]),
+  ])
 }
 
 ///|
@@ -661,17 +692,7 @@ fn view(dispatch : @rabbita.Dispatch[DocMsg], model : DocModel) -> @html.Html {
     model.active_example,
   )
   div(class="reference-shell", [
-    header(class="topbar", [
-      p(class="topbar-brand", "symbit"),
-      div(class="topbar-actions", [
-        button(
-          class="topbar-button",
-          type_="button",
-          on_click=dispatch(DocMsg::OpenSettings),
-          "Settings",
-        ),
-      ]),
-    ]),
+    topbar_view(dispatch),
     div(class="reference-layout", [
       div(class="sidebar", [
         section(class="panel sidebar-panel", [

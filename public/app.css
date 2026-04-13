@@ -176,6 +176,8 @@ body {
 
 .topbar-button,
 .settings-close-button {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink);
@@ -186,6 +188,7 @@ body {
   letter-spacing: 0.08em;
   cursor: pointer;
   padding: 10px 14px;
+  text-decoration: none;
   transition:
     border-color 140ms ease,
     background 140ms ease,
