@@ -77,10 +77,7 @@ fn expr_latex(expr : @symbit.Expr) -> String {
 }
 
 ///|
-fn bool_field(
-  label : String,
-  expr : @symlogic.BoolExpr,
-) -> @common.ResultField {
+fn bool_field(label : String, expr : @symlogic.BoolExpr) -> @common.ResultField {
   plain_field(label, logic_expr_text(expr))
 }
 
@@ -204,6 +201,38 @@ fn matrix_from_row_args(
   match matrix_result {
     Err(error) => Err(error.to_string())
     Ok(matrix) => Ok(matrix)
+  }
+}
+
+///|
+fn matrix_from_expr(
+  expr : @symbit.Expr,
+  usage : String,
+) -> Result[@symmatrices.Matrix, String] {
+  match @symcore.tuple_items(expr) {
+    Some(items) => {
+      let mut nested_rows = true
+      for item in items {
+        if @symcore.tuple_items(item) is None {
+          nested_rows = false
+          break
+        }
+      }
+      if nested_rows {
+        matrix_from_row_args(items, usage)
+      } else {
+        let rows = items.map(fn(item) { [item] })
+        let matrix_result : Result[
+          @symmatrices.Matrix,
+          @symmatrices.MatrixError,
+        ] = try? @symmatrices.matrix(rows)
+        match matrix_result {
+          Err(error) => Err(error.to_string())
+          Ok(matrix) => Ok(matrix)
+        }
+      }
+    }
+    None => Err("Expected tuple-shaped matrix input in \{usage}.")
   }
 }
 
@@ -599,8 +628,23 @@ fn x_symbol() -> @symbit.Expr {
 }
 
 ///|
+fn t_symbol() -> @symbit.Expr {
+  @symbit.sympify_name("t")
+}
+
+///|
+fn s_symbol() -> @symbit.Expr {
+  @symbit.sympify_name("s")
+}
+
+///|
 fn k_symbol() -> @symbit.Expr {
   @symbit.sympify_name("k")
+}
+
+///|
+fn lambda_symbol() -> @symbit.Expr {
+  @symbit.sympify_name("lambda")
 }
 
 ///|
@@ -707,6 +751,48 @@ pub fn evaluate_request(
           finish([
             expr_field("Variable", wrt),
             expr_field("Result", @symintegrals.integrate(expr, limits=[wrt])),
+          ])
+        }
+        "laplace_transform" => {
+          let (target, source, transform) = match args {
+            [integrand] => (integrand, t_symbol(), s_symbol())
+            [integrand, time_var, transform_var] =>
+              (integrand, time_var, transform_var)
+            _ =>
+              return @common.KernelEvalState::Failure(
+                "Expected laplace_transform(expr) or laplace_transform(expr, t, s).",
+              )
+          }
+          finish([
+            expr_field("Source Variable", source),
+            expr_field("Transform Variable", transform),
+            expr_field(
+              "Result",
+              @symintegrals.laplace_transform_eval(target, source, transform),
+            ),
+          ])
+        }
+        "inverse_laplace_transform" => {
+          let (target, transform, source) = match args {
+            [image] => (image, s_symbol(), t_symbol())
+            [image, transform_var, time_var] => (image, transform_var, time_var)
+            _ =>
+              return @common.KernelEvalState::Failure(
+                "Expected inverse_laplace_transform(expr) or inverse_laplace_transform(expr, s, t).",
+              )
+          }
+          finish([
+            expr_field("Transform Variable", transform),
+            expr_field("Source Variable", source),
+            expr_field(
+              "Result",
+              @symintegrals.inverse_laplace_transform_eval(
+                target,
+                transform,
+                source,
+                noconds=true,
+              ),
+            ),
           ])
         }
         "series" => {
@@ -1032,6 +1118,83 @@ pub fn evaluate_request(
                   ])
               }
             }
+          }
+        "matrix_inv" =>
+          match matrix_from_row_args(args, "inv(((...), (...), ...))") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(matrix) => {
+              let inv_result : Result[
+                @symmatrices.Matrix,
+                @symmatrices.MatrixError,
+              ] = try? matrix.inv()
+              match inv_result {
+                Err(error) =>
+                  @common.KernelEvalState::Failure(error.to_string())
+                Ok(value) =>
+                  finish([
+                    dense_matrix_field("Matrix", matrix),
+                    dense_matrix_field("Result", value),
+                  ])
+              }
+            }
+          }
+        "matrix_rank" =>
+          match matrix_from_row_args(args, "rank(((...), (...), ...))") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(matrix) =>
+              finish([
+                dense_matrix_field("Matrix", matrix),
+                plain_field("Result", matrix.rank().to_string()),
+              ])
+          }
+        "matrix_charpoly" =>
+          match matrix_from_row_args(args, "charpoly(((...), (...), ...))") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(matrix) => {
+              let symbol = lambda_symbol()
+              let charpoly_result : Result[
+                @symbit.Expr,
+                @symmatrices.MatrixError,
+              ] = try? matrix.charpoly(x=symbol)
+              match charpoly_result {
+                Err(error) =>
+                  @common.KernelEvalState::Failure(error.to_string())
+                Ok(value) =>
+                  finish([
+                    dense_matrix_field("Matrix", matrix),
+                    expr_field("Variable", symbol),
+                    expr_field("Result", value),
+                  ])
+              }
+            }
+          }
+        "matrix_solve" =>
+          match require_arg_count(args, [2], "matrix_solve(matrix, rhs)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) =>
+              match matrix_from_expr(args[0], "matrix_solve(matrix, rhs)") {
+                Err(message) => @common.KernelEvalState::Failure(message)
+                Ok(matrix) =>
+                  match matrix_from_expr(args[1], "matrix_solve(matrix, rhs)") {
+                    Err(message) => @common.KernelEvalState::Failure(message)
+                    Ok(rhs) => {
+                      let solve_result : Result[
+                        @symmatrices.Matrix,
+                        @symmatrices.MatrixError,
+                      ] = try? matrix.solve(rhs)
+                      match solve_result {
+                        Err(error) =>
+                          @common.KernelEvalState::Failure(error.to_string())
+                        Ok(value) =>
+                          finish([
+                            dense_matrix_field("Matrix", matrix),
+                            dense_matrix_field("Right-Hand Side", rhs),
+                            dense_matrix_field("Result", value),
+                          ])
+                      }
+                    }
+                  }
+              }
           }
         "terms_gcd" => {
           let poly_result : Result[@sympolys.Poly, @sympolys.PolyError] = try? @sympolys.Poly::from_expr_defaults(
@@ -1447,6 +1610,67 @@ pub fn evaluate_request(
                 None =>
                   @common.KernelEvalState::Failure(
                     "Expected an exact integer in mobius(n).",
+                  )
+              }
+          }
+        "nt_primepi" =>
+          match require_arg_count(args, [1], "primepi(n)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) =>
+              match exact_bigint(args[0]) {
+                Some(value) =>
+                  finish([
+                    plain_field("Input", value.to_string()),
+                    plain_field(
+                      "Result",
+                      @symntheory.primepi(value).to_string(),
+                    ),
+                  ])
+                None =>
+                  @common.KernelEvalState::Failure(
+                    "Expected an exact integer in primepi(n).",
+                  )
+              }
+          }
+        "nt_nextprime" =>
+          match require_arg_count(args, [1], "nextprime(n)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) =>
+              match exact_bigint(args[0]) {
+                Some(value) =>
+                  finish([
+                    plain_field("Input", value.to_string()),
+                    plain_field(
+                      "Result",
+                      @symntheory.nextprime(value).to_string(),
+                    ),
+                  ])
+                None =>
+                  @common.KernelEvalState::Failure(
+                    "Expected an exact integer in nextprime(n).",
+                  )
+              }
+          }
+        "nt_npartitions" =>
+          match require_arg_count(args, [1], "npartitions(n)") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) =>
+              match exact_int(args[0]) {
+                Some(value) if value >= 0 =>
+                  finish([
+                    plain_field("Input", value.to_string()),
+                    plain_field(
+                      "Result",
+                      @symntheory.npartitions(value).to_string(),
+                    ),
+                  ])
+                Some(_) =>
+                  @common.KernelEvalState::Failure(
+                    "Expected a non-negative exact integer in npartitions(n).",
+                  )
+                None =>
+                  @common.KernelEvalState::Failure(
+                    "Expected an exact integer in npartitions(n).",
                   )
               }
           }
@@ -2073,6 +2297,50 @@ pub fn evaluate_request(
               ])
           }
         }
+        "linsolve" =>
+          match require_arg_count(args, [2], "linsolve((eq1, ...), (x, ...))") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) => {
+              let equations = expr_args(args[0])
+              let symbols = expr_args(args[1])
+              let solve_result : Result[@symsets.Set, @symsolvers.SolverError] = try? @symsolvers.linsolve(
+                @symsolvers.linsolve_equations_input(equations),
+                symbols,
+              )
+              match solve_result {
+                Err(error) =>
+                  @common.KernelEvalState::Failure(error.to_string())
+                Ok(solved) =>
+                  finish([
+                    expr_list_field("Equations", equations),
+                    expr_list_field("Symbols", symbols),
+                    plain_field("Result", set_text(solved)),
+                  ])
+              }
+            }
+          }
+        "nonlinsolve" =>
+          match
+            require_arg_count(args, [2], "nonlinsolve((eq1, ...), (x, ...))") {
+            Err(message) => @common.KernelEvalState::Failure(message)
+            Ok(_) => {
+              let equations = expr_args(args[0])
+              let symbols = expr_args(args[1])
+              let solve_result : Result[@symsets.Set, @symsolvers.SolverError] = try? @symsolvers.nonlinsolve(
+                equations, symbols,
+              )
+              match solve_result {
+                Err(error) =>
+                  @common.KernelEvalState::Failure(error.to_string())
+                Ok(solved) =>
+                  finish([
+                    expr_list_field("Equations", equations),
+                    expr_list_field("Symbols", symbols),
+                    plain_field("Result", set_text(solved)),
+                  ])
+              }
+            }
+          }
         "decompogen" => {
           let symbol = x_symbol()
           let decomp_result : Result[

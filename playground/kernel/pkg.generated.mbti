@@ -13,6 +13,7 @@ pub fn evaluate_request(@common.KernelRequest) -> @common.KernelEvalState
 // Errors
 
 // Types and methods
+type LogicToken derive(Eq)
 
 // Type aliases
 

@@ -205,7 +205,14 @@ fn theme_button(
     title=theme_mode_help(mode),
     on_click=dispatch(DocMsg::SetThemeMode(mode)),
     [
-      span(class="parser-state", if model.theme_mode == mode { "on" } else { "off" }),
+      span(
+        class="parser-state",
+        if model.theme_mode == mode {
+          "on"
+        } else {
+          "off"
+        },
+      ),
       span(class="parser-copy", theme_mode_label(mode)),
     ],
   )
@@ -384,7 +391,7 @@ fn update(
     DocMsg::CloseSettings => (@rabbita.none, { ..model, settings_open: false })
     DocMsg::SetThemeMode(theme_mode) => {
       apply_theme_mode(theme_mode_token(theme_mode))
-      (@rabbita.none, { ..model, theme_mode })
+      (@rabbita.none, { ..model, theme_mode, })
     }
     DocMsg::ToggleStructuralFormDisplay =>
       (

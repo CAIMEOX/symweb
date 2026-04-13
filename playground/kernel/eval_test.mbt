@@ -209,9 +209,8 @@ test "kernel logic satisfiable and dnf front doors expose boolean results" {
   match evaluate_request(dnf_request) {
     @common.KernelEvalState::Failure(message) =>
       fail("logic_to_dnf failed: \{message}")
-    @common.KernelEvalState::Success(payload) => {
+    @common.KernelEvalState::Success(payload) =>
       inspect(payload.fields[0].value, content="(A & B) | (A & C)")
-    }
   }
   let sat_request = @common.kernel_request(
     "logic_satisfiable",
@@ -221,9 +220,8 @@ test "kernel logic satisfiable and dnf front doors expose boolean results" {
   match evaluate_request(sat_request) {
     @common.KernelEvalState::Failure(message) =>
       fail("logic_satisfiable failed: \{message}")
-    @common.KernelEvalState::Success(payload) => {
+    @common.KernelEvalState::Success(payload) =>
       inspect(payload.fields[0].value, content="False")
-    }
   }
 }
 
@@ -303,6 +301,177 @@ test "kernel discrete transforms expose fft and mobius front doors" {
     @common.KernelEvalState::Success(payload) => {
       inspect(payload.fields[1].label, content="Result")
       inspect(payload.fields[1].value, content="[1, 3, 4, 10]")
+    }
+  }
+}
+
+///|
+test "kernel new matrix front doors expose inverse solve rank and charpoly" {
+  let inv_request = @common.kernel_request(
+    "matrix_inv",
+    "((1, 2), (3, 5))",
+    test_parser_settings(),
+  )
+  match evaluate_request(inv_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("matrix_inv failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[1].label, content="Result")
+      if !payload.fields[1].value.contains("-5") ||
+        !payload.fields[1].value.contains("2") ||
+        !payload.fields[1].value.contains("3") ||
+        !payload.fields[1].value.contains("-1") {
+        fail("expected an explicit inverse matrix")
+      }
+    }
+  }
+  let solve_request = @common.kernel_request(
+    "matrix_solve",
+    "(((2, 1), (1, 3)), (1, 2))",
+    test_parser_settings(),
+  )
+  match evaluate_request(solve_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("matrix_solve failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[2].label, content="Result")
+      if !payload.fields[2].value.contains("1/5") ||
+        !payload.fields[2].value.contains("3/5") {
+        fail("expected a column-vector linear solve result")
+      }
+    }
+  }
+  let rank_request = @common.kernel_request(
+    "matrix_rank",
+    "((1, 2, 3), (2, 4, 6), (1, 1, 1))",
+    test_parser_settings(),
+  )
+  match evaluate_request(rank_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("matrix_rank failed: \{message}")
+    @common.KernelEvalState::Success(payload) =>
+      inspect(payload.fields[1].value, content="2")
+  }
+  let charpoly_request = @common.kernel_request(
+    "matrix_charpoly",
+    "((1, 2), (3, 4))",
+    test_parser_settings(),
+  )
+  match evaluate_request(charpoly_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("matrix_charpoly failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[2].label, content="Result")
+      if !payload.fields[2].value.contains("lambda") ||
+        !payload.fields[2].value.contains("lambda - 5") ||
+        !payload.fields[2].value.contains("- 2") {
+        fail("expected a characteristic polynomial in lambda")
+      }
+    }
+  }
+}
+
+///|
+test "kernel new ntheory and transform front doors expose exact results" {
+  let primepi_request = @common.kernel_request(
+    "nt_primepi",
+    "100",
+    test_parser_settings(),
+  )
+  match evaluate_request(primepi_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("nt_primepi failed: \{message}")
+    @common.KernelEvalState::Success(payload) =>
+      inspect(payload.fields[1].value, content="25")
+  }
+  let nextprime_request = @common.kernel_request(
+    "nt_nextprime",
+    "100",
+    test_parser_settings(),
+  )
+  match evaluate_request(nextprime_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("nt_nextprime failed: \{message}")
+    @common.KernelEvalState::Success(payload) =>
+      inspect(payload.fields[1].value, content="101")
+  }
+  let npartitions_request = @common.kernel_request(
+    "nt_npartitions",
+    "12",
+    test_parser_settings(),
+  )
+  match evaluate_request(npartitions_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("nt_npartitions failed: \{message}")
+    @common.KernelEvalState::Success(payload) =>
+      inspect(payload.fields[1].value, content="77")
+  }
+  let laplace_request = @common.kernel_request(
+    "laplace_transform",
+    "1",
+    test_parser_settings(),
+  )
+  match evaluate_request(laplace_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("laplace_transform failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[2].label, content="Result")
+      if payload.fields[2].value.contains("LaplaceTransform") ||
+        !payload.fields[2].value.contains("s") {
+        fail("expected a shifted Laplace-domain denominator")
+      }
+    }
+  }
+  let inverse_request = @common.kernel_request(
+    "inverse_laplace_transform",
+    "1/s",
+    test_parser_settings(),
+  )
+  match evaluate_request(inverse_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("inverse_laplace_transform failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[2].label, content="Result")
+      if payload.fields[2].value.contains("InverseLaplaceTransform") ||
+        !payload.fields[2].value.contains("Heaviside(t)") {
+        fail("expected a shifted exponential time-domain result")
+      }
+    }
+  }
+}
+
+///|
+test "kernel new solver front doors expose linear and nonlinear system results" {
+  let linsolve_request = @common.kernel_request(
+    "linsolve",
+    "((x + y - 2, x - y), (x, y))",
+    test_parser_settings(),
+  )
+  match evaluate_request(linsolve_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("linsolve failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[2].label, content="Result")
+      if !payload.fields[2].value.contains("1") {
+        fail("expected a finite linear solution set")
+      }
+    }
+  }
+  let nonlinsolve_request = @common.kernel_request(
+    "nonlinsolve",
+    "((x^2 - 4, y - 1), (x, y))",
+    test_parser_settings(),
+  )
+  match evaluate_request(nonlinsolve_request) {
+    @common.KernelEvalState::Failure(message) =>
+      fail("nonlinsolve failed: \{message}")
+    @common.KernelEvalState::Success(payload) => {
+      inspect(payload.fields[2].label, content="Result")
+      if !payload.fields[2].value.contains("-2") ||
+        !payload.fields[2].value.contains("2") ||
+        !payload.fields[2].value.contains("1") {
+        fail("expected a finite nonlinear solution set")
+      }
     }
   }
 }

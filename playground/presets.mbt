@@ -5,7 +5,7 @@ fn package_doc(id : DocPackage) -> PackageDoc {
       {
         id,
         label: "symsimplify",
-        overview: "Simplification is organized as a front-door module. The examples below mirror the way SymPy documents broad simplification first, then narrower rewrite families.",
+        overview: "Simplification is organized as a front-door module. The examples below start with broad simplification and then move to narrower rewrite families.",
         architecture: "Choose a function, read the reference note, then run the exact expression shown in the example block. The runner is intentionally narrow: one expression in, one normalized result out.",
         functions: [
           DocFunction::Simplify,
@@ -17,7 +17,7 @@ fn package_doc(id : DocPackage) -> PackageDoc {
       {
         id,
         label: "symcalculus",
-        overview: "This section follows the SymPy calculus split between differential operators and local analytic queries such as periodicity and singularity detection.",
+        overview: "This section separates differential operators from local analytic queries such as periodicity and singularity detection.",
         architecture: "Every function in this package keeps one principal variable, x, unless the example text states otherwise. That keeps the page close to a literate notebook rather than a generic REPL.",
         functions: [
           DocFunction::Diff,
@@ -30,8 +30,12 @@ fn package_doc(id : DocPackage) -> PackageDoc {
         id,
         label: "symintegrals",
         overview: "Integration is presented as a compact reference pane instead of a theorem catalogue: a single front-door entry point, explicit limits, and readable output.",
-        architecture: "The page uses indefinite integration with respect to x, matching the most common SymPy manual examples and keeping the examples stable inside the browser runner.",
-        functions: [DocFunction::Integrate],
+        architecture: "The page uses indefinite integration with respect to x by default. Transform examples use t as the source variable and s as the transform variable unless an example says otherwise.",
+        functions: [
+          DocFunction::Integrate,
+          DocFunction::LaplaceTransform,
+          DocFunction::InverseLaplaceTransform,
+        ],
       }
     DocPackage::SymSeries =>
       {
@@ -120,13 +124,17 @@ fn package_doc(id : DocPackage) -> PackageDoc {
           DocFunction::MatrixOnes,
           DocFunction::MatrixDet,
           DocFunction::MatrixTrace,
+          DocFunction::MatrixInv,
+          DocFunction::MatrixRank,
+          DocFunction::MatrixCharpoly,
+          DocFunction::MatrixSolve,
         ],
       }
     DocPackage::SymPolys =>
       {
         id,
         label: "sympolys",
-        overview: "The polynomial layer is shown through structure-revealing operators rather than raw domain objects. This mirrors the way SymPy's public documentation introduces poly tools through transformations on expressions.",
+        overview: "The polynomial layer is shown through structure-revealing operators rather than raw domain objects. The emphasis is on transformations over readable expressions.",
         architecture: "Examples are lowered to Poly internally and rendered back to expressions, so the browser page stays readable while still exercising the actual polynomial engine.",
         functions: [
           DocFunction::TermsGcd,
@@ -155,6 +163,9 @@ fn package_doc(id : DocPackage) -> PackageDoc {
           DocFunction::NtTotient,
           DocFunction::NtDivisorSigma,
           DocFunction::NtMobius,
+          DocFunction::NtPrimePi,
+          DocFunction::NtNextPrime,
+          DocFunction::NtNPartitions,
         ],
       }
     DocPackage::SymPhysics =>
@@ -200,11 +211,13 @@ fn package_doc(id : DocPackage) -> PackageDoc {
       {
         id,
         label: "symsolvers",
-        overview: "The solver reference is arranged the same way SymPy front doors are usually read: direct equation solving, set-valued solving, and expression decomposition as separate entry points.",
+        overview: "The solver reference is arranged around three common tasks: direct equation solving, set-valued solving, and structural decomposition.",
         architecture: "For solver examples the principal symbol is x. That keeps the examples short while still showing the shape of lists, sets, and functional decompositions returned by the real solver layer.",
         functions: [
           DocFunction::Solve,
           DocFunction::SolveSet,
+          DocFunction::LinSolve,
+          DocFunction::NonLinSolve,
           DocFunction::Decompogen,
         ],
       }
@@ -242,7 +255,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit",
         signature: "simplify(expr: Expr) -> Expr",
         summary: "Run the broad simplification dispatcher over a single symbolic expression.",
-        narrative: "This is the most general entry point in the page. It corresponds to the wide, heuristic simplification layer that SymPy users typically start with before moving to narrower passes.",
+        narrative: "This is the broadest simplification entry point in the page. Use it when you want the system to try several algebraic rewrites before switching to a narrower specialized pass.",
         interpretation: "The runner parses one expression and sends it straight into Symbit's simplify pipeline. The output is shown both as a parsed form and as the final simplified expression.",
         examples: [
           {
@@ -267,7 +280,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit",
         signature: "trigsimp(expr: Expr) -> Expr",
         summary: "Simplify an expression by applying trigonometric identities and rewrites.",
-        narrative: "SymPy documents trigonometric simplification as a distinct pass because its rewrite space is narrower and more predictable than general simplify. The same distinction is kept here.",
+        narrative: "Trigonometric simplification is kept separate because its rewrite space is narrower and more predictable than the general simplifier.",
         interpretation: "Use this when the structure is visibly trigonometric and you want a specialized result rather than a large general-purpose rewrite sweep.",
         examples: [
           {
@@ -292,7 +305,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit",
         signature: "ratsimp(expr: Expr) -> Expr",
         summary: "Normalize a rational expression into a tighter numerator and denominator form.",
-        narrative: "In SymPy, ratsimp is the deliberate front door for rational normalization. It is narrower than simplify and often better when the structure is obviously fractional.",
+        narrative: "This is the focused front door for rational normalization. It is narrower than general simplification and is often better when the structure is obviously fractional.",
         interpretation: "The page keeps the example set univariate or lightly multivariate so the output remains readable inside a documentation-style layout.",
         examples: [
           {
@@ -317,7 +330,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/symcalculus",
         signature: "diff(expr: Expr, wrt: Symbol) -> Expr",
         summary: "Differentiate an expression with respect to the principal symbol x.",
-        narrative: "The browser view deliberately fixes the variable to x, matching the dominant presentation style in SymPy examples and keeping the runner compact.",
+        narrative: "The browser view deliberately fixes the variable to x. That keeps the runner compact and makes the examples easy to scan.",
         interpretation: "You edit only the expression. The surrounding reference note tells you the differentiation variable, so the page reads like a literate derivation notebook.",
         examples: [
           {
@@ -342,7 +355,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/symcalculus",
         signature: "periodicity(expr: Expr, wrt: Symbol) -> Expr?",
         summary: "Estimate the fundamental period of an expression in x when one exists.",
-        narrative: "SymPy treats periodicity as a calculus utility rather than a generic simplifier. The page keeps the same reading model: one expression, one variable, one local analytic answer.",
+        narrative: "Periodicity is presented as a focused calculus query rather than a generic simplifier. The page keeps the reading model small: one expression, one variable, one local analytic answer.",
         interpretation: "When no finite period is found, the result panel says so explicitly instead of collapsing to an empty field.",
         examples: [
           {
@@ -367,7 +380,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/symcalculus",
         signature: "singularities(expr: Expr, wrt: Symbol) -> Set",
         summary: "Compute singular locations of an expression with respect to x.",
-        narrative: "This mirrors the SymPy calculus reference pattern: local analytic inspection on a single symbol, surfaced as a lightweight utility rather than a full theorem prover.",
+        narrative: "This is a local analytic inspection over a single symbol, surfaced as a lightweight utility rather than a full theorem prover.",
         interpretation: "The output is printed directly as a symbolic object so it stays comparable to the textual style used in technical documentation.",
         examples: [
           {
@@ -392,7 +405,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/symintegrals",
         signature: "integrate(expr: Expr, limits: Array[Expr] = [x]) -> Expr",
         summary: "Integrate an expression indefinitely with respect to x.",
-        narrative: "The page uses the same front-door naming as SymPy. Instead of exposing the entire transform stack, the browser focuses on the single indefinite integral path most readers expect first.",
+        narrative: "Instead of exposing the full transform stack first, the browser starts with the indefinite integral path most readers expect.",
         interpretation: "Examples are chosen so the result comes back as a closed symbolic expression and fits into a technical note layout.",
         examples: [
           {
@@ -406,6 +419,56 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
             label: "Trigonometric antiderivative",
             description: "A short example with a visible chain factor.",
             source: "sin(3*x)",
+          },
+        ],
+      }
+    DocFunction::LaplaceTransform =>
+      {
+        id,
+        package_id: DocPackage::SymIntegrals,
+        label: "laplace_transform",
+        module_path: "CAIMEOX/symbit/symintegrals",
+        signature: "laplace_transform(expr: Expr, t: Expr = t, s: Expr = s) -> Expr",
+        summary: "Transform a time-domain expression into its Laplace-domain form.",
+        narrative: "This is the standard front door for unilateral Laplace transforms. It is useful when you want a closed-form transform instead of manipulating transform objects by hand.",
+        interpretation: "Enter either a single expression, which is interpreted with respect to t into s, or a tuple (expr, t, s) to choose both symbols explicitly.",
+        examples: [
+          {
+            id: "laplace_exp_poly",
+            label: "Shifted polynomial",
+            description: "A short transform with both a polynomial factor and an exponential shift.",
+            source: "t^2 * exp(-2*t)",
+          },
+          {
+            id: "laplace_custom_symbols",
+            label: "Explicit source and target symbols",
+            description: "Use a tuple when the transform variables are not the defaults.",
+            source: "(tau * exp(-a*tau), tau, p)",
+          },
+        ],
+      }
+    DocFunction::InverseLaplaceTransform =>
+      {
+        id,
+        package_id: DocPackage::SymIntegrals,
+        label: "inverse_laplace_transform",
+        module_path: "CAIMEOX/symbit/symintegrals",
+        signature: "inverse_laplace_transform(expr: Expr, s: Expr = s, t: Expr = t) -> Expr",
+        summary: "Recover a time-domain expression from a Laplace-domain input.",
+        narrative: "This is the direct inverse transform entry point. It is useful for browsing standard transform pairs and shifted rational forms without leaving the page.",
+        interpretation: "Enter either a single expression, which is interpreted from s back to t, or a tuple (expr, s, t) to choose both symbols explicitly.",
+        examples: [
+          {
+            id: "inverse_laplace_shifted_pole",
+            label: "Repeated shifted pole",
+            description: "A compact rational form with a delayed exponential response.",
+            source: "1/(s + 2)^3",
+          },
+          {
+            id: "inverse_laplace_custom_symbols",
+            label: "Explicit transform variables",
+            description: "Use a tuple when the transform variable names are part of the demonstration.",
+            source: "(1/(p^2 + 1), p, tau)",
           },
         ],
       }
@@ -1011,6 +1074,82 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
           },
         ],
       }
+    DocFunction::MatrixInv =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "inv",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "Matrix.inv(matrix: Matrix) -> Matrix",
+        summary: "Compute the inverse of a dense matrix literal.",
+        narrative: "Matrix inversion is the first dense matrix operation that turns a concrete matrix into another concrete matrix with nontrivial rational structure.",
+        interpretation: "Enter a tuple of row tuples. The page constructs the matrix, computes its inverse, and renders the result as a dense matrix.",
+        examples: [
+          {
+            id: "matrix_inv_numeric",
+            label: "Invert a 2x2 matrix",
+            description: "A compact exact inverse with rational entries.",
+            source: "((1, 2), (3, 5))",
+          },
+        ],
+      }
+    DocFunction::MatrixRank =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "rank",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "Matrix.rank(matrix: Matrix) -> Int",
+        summary: "Compute the rank of a dense matrix literal.",
+        narrative: "Rank is a compact structural invariant for linear dependence. It is especially useful when you want a scalar summary of a matrix without solving a full system.",
+        interpretation: "Enter a tuple of row tuples. The page constructs the matrix and reports its rank as an exact integer.",
+        examples: [
+          {
+            id: "matrix_rank_dependent",
+            label: "Rank-deficient matrix",
+            description: "Two dependent rows make the rank drop below the row count.",
+            source: "((1, 2, 3), (2, 4, 6), (1, 1, 1))",
+          },
+        ],
+      }
+    DocFunction::MatrixCharpoly =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "charpoly",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "Matrix.charpoly(matrix: Matrix, x: Expr = lambda) -> Expr",
+        summary: "Compute the characteristic polynomial of a dense matrix literal.",
+        narrative: "The characteristic polynomial connects matrix structure to polynomial algebra. It is a good bridge between the matrix and polynomial packages.",
+        interpretation: "Enter a tuple of row tuples. The page uses lambda as the polynomial variable unless the backend chooses a simpler equivalent print form.",
+        examples: [
+          {
+            id: "matrix_charpoly_basic",
+            label: "Characteristic polynomial of a 2x2 matrix",
+            description: "A small matrix whose polynomial can still be checked by hand.",
+            source: "((1, 2), (3, 4))",
+          },
+        ],
+      }
+    DocFunction::MatrixSolve =>
+      {
+        id,
+        package_id: DocPackage::SymMatrices,
+        label: "solve",
+        module_path: "CAIMEOX/symbit/symmatrices",
+        signature: "Matrix.solve(matrix: Matrix, rhs: Matrix) -> Matrix",
+        summary: "Solve a dense linear system A * x = b.",
+        narrative: "This is the direct dense-system solve entry point for an explicit coefficient matrix and right-hand side.",
+        interpretation: "Enter a tuple of two items: the coefficient matrix as nested row tuples, and the right-hand side as either a tuple vector or a column-matrix literal.",
+        examples: [
+          {
+            id: "matrix_solve_vector_rhs",
+            label: "Solve a 2x2 linear system",
+            description: "The right-hand side is given as a short tuple vector.",
+            source: "(((2, 1), (1, 3)), (1, 2))",
+          },
+        ],
+      }
     DocFunction::TermsGcd =>
       {
         id,
@@ -1019,7 +1158,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/sympolys",
         signature: "terms_gcd(poly: Poly) -> Poly",
         summary: "Factor out the greatest common term content from a polynomial expression.",
-        narrative: "SymPy presents term GCD extraction as a structure-revealing poly tool. The same reading model works well in a browser: parse an expression, lower it to Poly, then render the reduced form back to algebraic notation.",
+        narrative: "Term GCD extraction is a structure-revealing poly tool. The browser lowers the input to a polynomial and then renders the reduced form back as algebraic notation.",
         interpretation: "This demo stays expression-first. Internally it uses the polynomial engine, but the result is shown as a rewritten expression so the page remains approachable.",
         examples: [
           {
@@ -1194,7 +1333,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/sympolys",
         signature: "decompose(poly: Poly) -> Array[Poly]",
         summary: "Decompose a polynomial into nested polynomial components when possible.",
-        narrative: "This follows the same structural view SymPy uses in its polytools documentation: you are not just simplifying a polynomial, you are exposing its compositional layers.",
+        narrative: "This exposes compositional layers rather than merely simplifying a polynomial.",
         interpretation: "Examples are kept single-variable so each decomposition chain reads like a short literate derivation rather than a raw algebra dump.",
         examples: [
           {
@@ -1432,6 +1571,63 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
             id: "nt_mobius_squareful",
             label: "Input with a repeated prime",
             description: "Any repeated prime factor forces zero.",
+            source: "12",
+          },
+        ],
+      }
+    DocFunction::NtPrimePi =>
+      {
+        id,
+        package_id: DocPackage::SymNTheory,
+        label: "primepi",
+        module_path: "CAIMEOX/symbit/symntheory",
+        signature: "primepi(n: Int) -> Int",
+        summary: "Count how many primes are less than or equal to n.",
+        narrative: "This prime-counting function is the natural aggregate companion to primality and next-prime queries.",
+        interpretation: "Enter one exact integer. The page returns the exact number of primes up to that bound.",
+        examples: [
+          {
+            id: "nt_primepi_hundred",
+            label: "Count primes up to 100",
+            description: "A standard small bound with a well-known answer.",
+            source: "100",
+          },
+        ],
+      }
+    DocFunction::NtNextPrime =>
+      {
+        id,
+        package_id: DocPackage::SymNTheory,
+        label: "nextprime",
+        module_path: "CAIMEOX/symbit/symntheory",
+        signature: "nextprime(n: Int) -> Int",
+        summary: "Return the first prime strictly larger than n.",
+        narrative: "This is a direct neighbor query over the ordered prime sequence. It complements primality tests with a constructive result.",
+        interpretation: "Enter one exact integer. The result is the next prime greater than the input.",
+        examples: [
+          {
+            id: "nt_nextprime_near_hundred",
+            label: "Next prime after 100",
+            description: "A small next-prime query with a clear expected result.",
+            source: "100",
+          },
+        ],
+      }
+    DocFunction::NtNPartitions =>
+      {
+        id,
+        package_id: DocPackage::SymNTheory,
+        label: "npartitions",
+        module_path: "CAIMEOX/symbit/symntheory",
+        signature: "npartitions(n: Int) -> Int",
+        summary: "Count the additive partitions of a non-negative integer.",
+        narrative: "Partition numbers grow quickly and are a good example of an exact arithmetic sequence that is not defined by elementary factorization formulas.",
+        interpretation: "Enter one exact non-negative integer. The page returns the exact partition count.",
+        examples: [
+          {
+            id: "nt_npartitions_twelve",
+            label: "Partition count of 12",
+            description: "A medium-sized input whose value is still easy to inspect.",
             source: "12",
           },
         ],
@@ -2014,8 +2210,8 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/symsolvers",
         signature: "solve(expr: Expr, symbols: Array[Symbol] = [x]) -> SolveResult",
         summary: "Solve an algebraic equation for the principal symbol x.",
-        narrative: "SymPy's classic solve front door returns lists or dictionaries depending on the problem shape. This page keeps the simplest scalar branch and renders the exact result container.",
-        interpretation: "The input is interpreted as an equation equal to zero, which is the standard textbook reading and matches SymPy's default solve front door.",
+        narrative: "This solve front door returns lists or dictionaries depending on the problem shape. The page keeps the simplest scalar branch and renders the exact result container.",
+        interpretation: "The input is interpreted as an equation equal to zero, which is the standard textbook reading for symbolic solvers.",
         examples: [
           {
             id: "solve_quadratic",
@@ -2039,8 +2235,8 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/symsolvers",
         signature: "solveset(expr: Expr, symbol: Symbol = x, domain: Set = Complexes) -> Set",
         summary: "Return a set-valued solution object for an equation in x.",
-        narrative: "This section tracks the SymPy distinction between solve and solveset: the former is convenience-oriented, the latter is set-oriented and prints as a mathematical object.",
-        interpretation: "The page fixes the domain to Complexes so the result is deterministic and easy to compare against SymPy-style documentation.",
+        narrative: "This front door is set-oriented and prints a mathematical set object rather than a convenience container.",
+        interpretation: "The page fixes the domain to Complexes so the result is deterministic and easy to compare across examples.",
         examples: [
           {
             id: "solveset_quadratic",
@@ -2056,6 +2252,44 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
           },
         ],
       }
+    DocFunction::LinSolve =>
+      {
+        id,
+        package_id: DocPackage::SymSolvers,
+        label: "linsolve",
+        module_path: "CAIMEOX/symbit/symsolvers",
+        signature: "linsolve(equations: Array[Expr], symbols: Array[Symbol]) -> Set",
+        summary: "Solve a linear system and return the solution set.",
+        narrative: "This entry point is specialized for linear systems. It exposes the exact set-valued result of solving several equations in several unknowns.",
+        interpretation: "Enter a tuple of two items: the equations tuple and the symbols tuple. Each equation is interpreted as equal to zero.",
+        examples: [
+          {
+            id: "linsolve_two_by_two",
+            label: "Solve a 2x2 linear system",
+            description: "A small system with a single exact solution.",
+            source: "((x + y - 2, x - y), (x, y))",
+          },
+        ],
+      }
+    DocFunction::NonLinSolve =>
+      {
+        id,
+        package_id: DocPackage::SymSolvers,
+        label: "nonlinsolve",
+        module_path: "CAIMEOX/symbit/symsolvers",
+        signature: "nonlinsolve(equations: Array[Expr], symbols: Array[Symbol]) -> Set",
+        summary: "Solve a nonlinear system and return the solution set.",
+        narrative: "This entry point handles systems where the equations are not purely linear in the unknowns.",
+        interpretation: "Enter a tuple of two items: the equations tuple and the symbols tuple. Each equation is interpreted as equal to zero.",
+        examples: [
+          {
+            id: "nonlinsolve_mixed_system",
+            label: "Solve a mixed quadratic-linear system",
+            description: "A small nonlinear system with a finite exact solution set.",
+            source: "((x^2 + y - 5, x - y), (x, y))",
+          },
+        ],
+      }
     DocFunction::Decompogen =>
       {
         id,
@@ -2064,7 +2298,7 @@ fn function_doc(id : DocFunction) -> FunctionDoc {
         module_path: "CAIMEOX/symbit/symsolvers",
         signature: "decompogen(expr: Expr, symbol: Symbol) -> Array[Expr]",
         summary: "Extract a functional composition chain with respect to x.",
-        narrative: "SymPy documents decompogen as a solver-adjacent structural tool. It fits a literate page especially well because the output is naturally a sequence of layers.",
+        narrative: "Decompogen is a solver-adjacent structural tool. It fits a literate page especially well because the output is naturally a sequence of layers.",
         interpretation: "The result panel prints the composition chain in order, so the user can read it top-down like a derivation.",
         examples: [
           {
@@ -2099,6 +2333,8 @@ fn function_topic(id : DocFunction) -> String {
     DocFunction::Periodicity => "calculus"
     DocFunction::Singularities => "calculus"
     DocFunction::Integrate => "integrals"
+    DocFunction::LaplaceTransform => "integrals"
+    DocFunction::InverseLaplaceTransform => "integrals"
     DocFunction::SeriesExpand => "series"
     DocFunction::Limit => "series"
     DocFunction::Residue => "series"
@@ -2125,6 +2361,10 @@ fn function_topic(id : DocFunction) -> String {
     DocFunction::MatrixOnes => "matrices"
     DocFunction::MatrixDet => "matrices"
     DocFunction::MatrixTrace => "matrices"
+    DocFunction::MatrixInv => "matrices"
+    DocFunction::MatrixRank => "matrices"
+    DocFunction::MatrixCharpoly => "matrices"
+    DocFunction::MatrixSolve => "matrices"
     DocFunction::TermsGcd => "polys"
     DocFunction::PolyFactor => "polys"
     DocFunction::PolyFactorList => "polys"
@@ -2142,6 +2382,9 @@ fn function_topic(id : DocFunction) -> String {
     DocFunction::NtTotient => "ntheory"
     DocFunction::NtDivisorSigma => "ntheory"
     DocFunction::NtMobius => "ntheory"
+    DocFunction::NtPrimePi => "ntheory"
+    DocFunction::NtNextPrime => "ntheory"
+    DocFunction::NtNPartitions => "ntheory"
     DocFunction::PhysMsigma => "physics.matrices"
     DocFunction::PhysMgamma => "physics.matrices"
     DocFunction::PhysMdft => "physics.matrices"
@@ -2174,6 +2417,8 @@ fn function_topic(id : DocFunction) -> String {
     DocFunction::PhysQuarterWaveRetarder => "physics.optics.polarization"
     DocFunction::Solve => "solvers"
     DocFunction::SolveSet => "solvers"
+    DocFunction::LinSolve => "solvers"
+    DocFunction::NonLinSolve => "solvers"
     DocFunction::Decompogen => "solvers"
   }
 }
@@ -2188,6 +2433,8 @@ fn function_input_format(id : DocFunction) -> String {
     DocFunction::Periodicity => "expr"
     DocFunction::Singularities => "expr"
     DocFunction::Integrate => "expr"
+    DocFunction::LaplaceTransform => "expr or (expr, t, s)"
+    DocFunction::InverseLaplaceTransform => "expr or (expr, s, t)"
     DocFunction::SeriesExpand => "expr"
     DocFunction::Limit => "expr"
     DocFunction::Residue => "expr"
@@ -2214,6 +2461,10 @@ fn function_input_format(id : DocFunction) -> String {
     DocFunction::MatrixOnes => "n or (rows, cols)"
     DocFunction::MatrixDet => "((row1), (row2), ...)"
     DocFunction::MatrixTrace => "((row1), (row2), ...)"
+    DocFunction::MatrixInv => "((row1), (row2), ...)"
+    DocFunction::MatrixRank => "((row1), (row2), ...)"
+    DocFunction::MatrixCharpoly => "((row1), (row2), ...)"
+    DocFunction::MatrixSolve => "((((row1), ...), rhs))"
     DocFunction::TermsGcd => "expr"
     DocFunction::PolyFactor => "expr"
     DocFunction::PolyFactorList => "expr"
@@ -2231,6 +2482,9 @@ fn function_input_format(id : DocFunction) -> String {
     DocFunction::NtTotient => "n"
     DocFunction::NtDivisorSigma => "n or (n, k)"
     DocFunction::NtMobius => "n"
+    DocFunction::NtPrimePi => "n"
+    DocFunction::NtNextPrime => "n"
+    DocFunction::NtNPartitions => "n"
     DocFunction::PhysMsigma => "i"
     DocFunction::PhysMgamma => "mu"
     DocFunction::PhysMdft => "n"
@@ -2263,6 +2517,8 @@ fn function_input_format(id : DocFunction) -> String {
     DocFunction::PhysQuarterWaveRetarder => "theta"
     DocFunction::Solve => "expr"
     DocFunction::SolveSet => "expr"
+    DocFunction::LinSolve => "((eq1, ...), (x, ...))"
+    DocFunction::NonLinSolve => "((eq1, ...), (x, ...))"
     DocFunction::Decompogen => "expr"
   }
 }

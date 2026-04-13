@@ -25,6 +25,8 @@ priv enum DocFunction {
   Periodicity
   Singularities
   Integrate
+  LaplaceTransform
+  InverseLaplaceTransform
   SeriesExpand
   Limit
   Residue
@@ -51,6 +53,10 @@ priv enum DocFunction {
   MatrixOnes
   MatrixDet
   MatrixTrace
+  MatrixInv
+  MatrixRank
+  MatrixCharpoly
+  MatrixSolve
   TermsGcd
   PolyFactor
   PolyFactorList
@@ -68,6 +74,9 @@ priv enum DocFunction {
   NtTotient
   NtDivisorSigma
   NtMobius
+  NtPrimePi
+  NtNextPrime
+  NtNPartitions
   PhysMsigma
   PhysMgamma
   PhysMdft
@@ -100,6 +109,8 @@ priv enum DocFunction {
   PhysQuarterWaveRetarder
   Solve
   SolveSet
+  LinSolve
+  NonLinSolve
   Decompogen
 } derive(Eq)
 

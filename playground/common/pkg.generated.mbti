@@ -24,29 +24,20 @@ pub fn result_field(String, String, latex? : String?) -> ResultField
 pub(all) enum KernelEvalState {
   Success(KernelSuccess)
   Failure(String)
-}
-pub impl Eq for KernelEvalState
-pub impl ToJson for KernelEvalState
-pub impl @json.FromJson for KernelEvalState
+} derive(Eq, ToJson, @json.FromJson)
 
 pub(all) struct KernelRequest {
   function_id : String
   source : String
   parser : ParserSettings
-}
-pub impl Eq for KernelRequest
-pub impl ToJson for KernelRequest
-pub impl @json.FromJson for KernelRequest
+} derive(Eq, ToJson, @json.FromJson)
 
 pub(all) struct KernelSuccess {
   parsed_expression : String
   parsed_latex : String?
   structural_form : String
   fields : Array[ResultField]
-}
-pub impl Eq for KernelSuccess
-pub impl ToJson for KernelSuccess
-pub impl @json.FromJson for KernelSuccess
+} derive(Eq, ToJson, @json.FromJson)
 
 pub(all) struct ParserSettings {
   caret_as_power : Bool
@@ -56,19 +47,13 @@ pub(all) struct ParserSettings {
   function_exponentiation : Bool
   factorial_notation : Bool
   convert_equals_signs : Bool
-}
-pub impl Eq for ParserSettings
-pub impl ToJson for ParserSettings
-pub impl @json.FromJson for ParserSettings
+} derive(Eq, ToJson, @json.FromJson)
 
 pub(all) struct ResultField {
   label : String
   value : String
   latex : String?
-}
-pub impl Eq for ResultField
-pub impl ToJson for ResultField
-pub impl @json.FromJson for ResultField
+} derive(Eq, ToJson, @json.FromJson)
 
 // Type aliases
 

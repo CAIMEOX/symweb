@@ -37,23 +37,15 @@ fn logic_expr_structural_form(expr : @symlogic.BoolExpr) -> String {
     @symlogic.BoolExpr::Not(inner) =>
       "Not(\{logic_expr_structural_form(inner)})"
     @symlogic.BoolExpr::And(args) =>
-      "And([" +
-      args.map(logic_expr_structural_form).join(", ") +
-      "])"
+      "And([" + args.map(logic_expr_structural_form).join(", ") + "])"
     @symlogic.BoolExpr::Or(args) =>
-      "Or([" +
-      args.map(logic_expr_structural_form).join(", ") +
-      "])"
+      "Or([" + args.map(logic_expr_structural_form).join(", ") + "])"
     @symlogic.BoolExpr::Xor(args) =>
-      "Xor([" +
-      args.map(logic_expr_structural_form).join(", ") +
-      "])"
+      "Xor([" + args.map(logic_expr_structural_form).join(", ") + "])"
     @symlogic.BoolExpr::Implies(lhs, rhs) =>
       "Implies(\{logic_expr_structural_form(lhs)}, \{logic_expr_structural_form(rhs)})"
     @symlogic.BoolExpr::Equivalent(args) =>
-      "Equivalent([" +
-      args.map(logic_expr_structural_form).join(", ") +
-      "])"
+      "Equivalent([" + args.map(logic_expr_structural_form).join(", ") + "])"
     @symlogic.BoolExpr::ITE(c, t, e) =>
       "ITE(\{logic_expr_structural_form(c)}, \{logic_expr_structural_form(t)}, \{logic_expr_structural_form(e)})"
   }
@@ -114,7 +106,10 @@ fn logic_lex(src : String) -> Result[Array[LogicToken], String] {
       ')' => (LogicToken::RParen, index + 1)
       ',' => (LogicToken::Comma, index + 1)
       _ if logic_is_ident_start(ch) => logic_scan_ident(src, index)
-      _ => return Err("Unsupported logic character '\{ch}'. Use symbols, ~, &, |, ^, commas, and parentheses.")
+      _ =>
+        return Err(
+          "Unsupported logic character '\{ch}'. Use symbols, ~, &, |, ^, commas, and parentheses.",
+        )
     }
     tokens.push(token)
     index = next
